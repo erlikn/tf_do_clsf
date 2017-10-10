@@ -208,7 +208,7 @@ def _make_image(depthview, rXYZ):
         xCent[i] = (xBinEdges[i]+xBinEdges[i+1])/2
     yCent = np.ndarray(shape=yBinEdges.shape[0]-1)
     for i in range(0, yCent.shape[0]):
-        yCent[i] = (yBinEdge BIN_rng, BIN_min, BIN_SIZEs[i]+yBinEdges[i+1])/2
+        yCent[i] = (yBinEdges[i]+yBinEdges[i+1])/2
     # make image of size 128x512 : 64 -> 128 (double sampling the height)
     depthImage = np.zeros(shape=[128, 512])
     # normalize range values
@@ -481,7 +481,7 @@ seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01',
 seqIDtest = ['09', '10']
 
 traintfRecordFLD = "../Data/kitti/train_tfrec_nt_"+str(NUM_TUPLES)+"_clsf/"
-testtfRecordFLD = "../Data/kitti/test_tfrec_nt_"+ste(NUM_TUPLES)+"_clsf/"
+testtfRecordFLD = "../Data/kitti/test_tfrec_nt_"+str(NUM_TUPLES)+"_clsf/"
 
 ##def main():
 #    #find_max_mins("train", pclPath, posePath, seqIDtrain)
