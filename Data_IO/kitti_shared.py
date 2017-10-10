@@ -315,7 +315,7 @@ def remove_trailing_zeros(xyz):
 
 
 ############################################################################
-def get_multi_bit_target(pose):
+def get_multi_bit_target(pose, BIN_rng, BIN_min, BIN_SIZE):
     bit = np.zeros(shape=[len(BIN_min), BIN_SIZE], dtype=np.int8)
     for labdex in range(len(BIN_min)):
         for bindex in range(BIN_SIZE+1):

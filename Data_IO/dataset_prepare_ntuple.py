@@ -394,7 +394,7 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
                 pose_B2A = _get_tMat_B_2_A(poseX20List[i-1], poseX20List[i])
                 abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
                 poseB2AList.append(abgxyzB2A)
-                bit = kitti.get_multi_bit_target(abgxyzB2A)
+                bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_min, BIN_SIZE)
                 bitB2AList.append(bit)
         else:
             xyziList.pop(0)
@@ -412,7 +412,7 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
             pose_B2A = _get_tMat_B_2_A(poseX20List[numTuples-2], poseX20List[numTuples-1])
             abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
             poseB2AList.append(abgxyzB2A)
-            bit = kitti.get_multi_bit_target(abgxyzB2A)
+            bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_min, BIN_SIZE)
             bitB2AList.append(bit)
 
         
