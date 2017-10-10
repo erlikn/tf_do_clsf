@@ -35,8 +35,8 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 #print(device_lib.list_local_devices())
 
 # import input & output modules 
-import Data_IO.data_input as data_input
-import Data_IO.data_output as data_output
+import Data_IO.data_input_ntuple as data_input
+import Data_IO.data_output_ntuple as data_output
 
 PHASE = 'train'
 
@@ -179,7 +179,7 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_integer('ProgressStepReportStep', 20,
                             """Number of batches to run.""")
 ####################################################
-def _set_control_params():
+def _set_control_params(modelParams):
     modelParams['phase'] = PHASE
     #params['shardMeta'] = model_cnn.getShardsMetaInfo(FLAGS.dataDir, params['phase'])
 
@@ -215,7 +215,7 @@ def train(modelParams):
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        images, pclA, pclB, targetT, tfrecFileIDs = data_input.inputs(**modelParams)
+        images, pcl, targetT, tfrecFileIDs = data_input.inputs(**modelParams)
         print('Input        ready')
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -226,7 +226,7 @@ def train(modelParams):
         # use mask to get degrees significant
         # What about adaptive mask to zoom into differences at each CNN stack !!!
         #loss = model_cnn.weighted_loss(targetP, targetT, **modelParams)
-        loss = weighted_params_loss(targetP, targetT, **modelParams)
+        loss = weighted_params_loss(targetP, targetT[:,:,modelParams['imageDepthChannels']-2], **modelParams)
         # pcl based loss
         #loss = model_cnn.pcl_params_loss(pclA, targetP, targetT, **modelParams)
 
@@ -279,7 +279,7 @@ def train(modelParams):
             print('Warping %d images with batch size %d in %d steps' % (modelParams['numExamples'], modelParams['activeBatchSize'], stepsForOneDataRound))
             for step in xrange(stepsForOneDataRound):
                 startTime = time.time()
-                evImages, evPclA, evPclB, evtargetT, evtargetP, evtfrecFileIDs, evlossValue = sess.run([images, pclA, pclB, targetT, targetP, tfrecFileIDs, loss])
+                evImages, evPcl, evtargetT, evtargetP, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, targetP, tfrecFileIDs, loss])
                 for fileIdx in range(modelParams['activeBatchSize']):
                     fileIDname = str(evtfrecFileIDs[fileIdx][0]) + "_" + str(evtfrecFileIDs[fileIdx][1]) + "_" + str(evtfrecFileIDs[fileIdx][2])
                     if (fileIDname in filesDictionaryAccum):
@@ -287,7 +287,7 @@ def train(modelParams):
                     else:
                         filesDictionaryAccum[fileIDname]=1
                 #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-                data_output.output(evImages, evPclA, evPclB, evtargetT, evtargetP, evtfrecFileIDs, **modelParams)
+                data_output.output(evImages, evPcl, evtargetT, evtargetP, evtfrecFileIDs, **modelParams)
                 duration = time.time() - startTime
                 durationSum += duration
                 durationSumAll += duration

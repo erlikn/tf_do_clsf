@@ -291,7 +291,7 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
         'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
         'images': tf.FixedLenFeature([], dtype=tf.string),
         'pcl': tf.FixedLenFeature([kwargs.get('pclRows')*kwargs.get('pclCols')*numTuples], dtype=tf.float32),
-        'targetn6': tf.FixedLenFeature([6*(numTuples-1)], dtype=tf.float32)
+        'targetn6': tf.FixedLenFeature([6*(numTuples-1)], dtype=tf.float32),
         'bitTarget': tf.FixedLenFeature([], dtype=tf.string),
         'rngs': tf.FixedLenFeature([6*32*(numTuples-1)], dtype=tf.float32)
         }
@@ -373,9 +373,9 @@ def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bit
         'fileID': _int64_array(fileID),
         'images': _bytes_feature(flatImageList),
         'pcl': _float_nparray(pclList), # 2D np array
-        'targetn6': _float_nparray(tMatTargetList) # 2D np array
+        'targetn6': _float_nparray(tMatTargetList), # 2D np array
         'bitTarget': _bytes_feature(bitTargetList),
         'rngs': _float_nparray(rngList)
         }))
     writer.write(example.SerializeToString())
-    writer.close()tfname
+    writer.close()

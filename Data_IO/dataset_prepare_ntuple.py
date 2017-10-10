@@ -23,6 +23,8 @@ import multiprocessing
 import tfrecord_io
 import kitti_shared as kitti
 
+NUM_TUPLES = 2
+
 # xyzi[0]/rXYZ out of [-1,1]  this is reveresd
 MIN_X_R = -1
 MAX_X_R = 1
@@ -502,5 +504,5 @@ testtfRecordFLD = "../Data/kitti/test_tfrecords_5tuple/"
 _set_folders(traintfRecordFLD)
 _set_folders(testtfRecordFLD)
 
-prepare_dataset("train", pclPath, posePath, seqIDtrain, traintfRecordFLD, numTuples=5)
-prepare_dataset("test", pclPath, posePath, seqIDtest, testtfRecordFLD, numTuples=5)
+prepare_dataset("train", pclPath, posePath, seqIDtrain, traintfRecordFLD, numTuples=NUM_TUPLES)
+prepare_dataset("test", pclPath, posePath, seqIDtest, testtfRecordFLD, numTuples=NUM_TUPLES)

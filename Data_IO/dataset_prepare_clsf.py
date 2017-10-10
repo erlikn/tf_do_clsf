@@ -429,8 +429,7 @@ def _set_folders(folderPath):
 
 pclPath = ""
 posePath = '../Data/kitti/poses/'
-seqIDtrain = ['00']#, '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
-seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10']
+seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
 seqIDtest = ['09', '10']
 
 traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf/"

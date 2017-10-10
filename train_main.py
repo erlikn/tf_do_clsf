@@ -31,14 +31,15 @@ import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
+#from tensorflow.python.client import device_lib
+#print(device_lib.list_local_devices())
+
 # import input & output modules 
-import Data_IO.data_input as data_input
-import Data_IO.data_output as data_output
+import Data_IO.data_input_ntuple as data_input
+import Data_IO.data_output_ntuple as data_output
 
 PHASE = 'train'
 
-#from tensorflow.python.client import device_lib
-#print(device_lib.list_local_devices())
 
 ####################################################
 ####################################################
@@ -75,7 +76,6 @@ def _set_control_params(modelParams):
         modelParams['dataDir'] = modelParams['testDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTestDataDir']
     return modelParams
-
 ####################################################
 ####################################################
 ################### introducing new op for mod
@@ -125,7 +125,7 @@ def weighted_params_loss(targetP, targetT, **kwargs):
     #targetT = tf_mod(targetT, mask)
     # Importance weigting on angles as they have smaller values
     mask = np.array([[100, 100, 100, 1, 1, 1]], dtype=np.float32)
-    #mask = np.array([[1000, 1000, 1000, 100, 100, 100]], dtype=np.float32)
+#    mask = np.array([[1000, 1000, 1000, 100, 100, 100]], dtype=np.float32)
     mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
     targetP = tf.multiply(targetP, mask)
     targetT = tf.multiply(targetT, mask)
@@ -224,7 +224,7 @@ def train(modelParams):
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        images, pclA, pclB, targetT, tfrecFileIDs = data_input.inputs(**modelParams)
+        images, pclA, targetT, tfrecFileIDs = data_input.inputs(**modelParams)
         print('Input        ready')
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -236,7 +236,8 @@ def train(modelParams):
         # What about adaptive mask to zoom into differences at each CNN stack !!!
         ########## model_cnn.loss is called in the loss function
         #loss = weighted_loss(targetP, targetT, **modelParams)
-        loss = weighted_params_loss(targetP, targetT, **modelParams)
+        # modelParams[imageDepthChannels]-2 cuz we have n tuples and n-1 transitions => changing index to 0 means depth-2
+        loss = weighted_params_loss(targetP, targetT[:,:,modelParams['imageDepthChannels']-2], **modelParams)
         # pcl based loss
         #loss = pcl_params_loss(pclA, targetP, targetT, **modelParams)
 

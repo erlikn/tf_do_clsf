@@ -16,15 +16,15 @@ import Model_Settings.json_maker as json_maker
 json_maker.recompile_json_files()
 
 # 170706_ITR_B_1.json Best performer
-jsonsToRead = ['170706_ITR_B_1.json',
-               '170706_ITR_B_2.json',
-               '170706_ITR_B_3.json'
-               ]
+#jsonsToRead = ['170706_ITR_B_1.json',
+#               '170706_ITR_B_2.json'#,
+#               #'170706_ITR_B_3.json'
+#               ]
 
 # BAD zigzagy as the orientation and translation are seperate
-#jsonsToRead = ['170720_ITR_B_1.json',
-#               '170720_ITR_B_2.json'
-#               ]
+jsonsToRead = ['170720_ITR_B_1.json',
+               '170720_ITR_B_2.json'
+               ]
 
 #jsonsToRead = ['170719_ITR_B_1.json',
 #               '170719_ITR_B_2.json'
@@ -59,8 +59,8 @@ seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']
 seqIDtest = ['09', '10']
 ####################################################
 def _get_file_names(readFolder, fileFormat):
-    print(readFolder)
-    print(fileFormat)
+    #print(readFolder)
+    #print(fileFormat)
     filenames = [f for f in listdir(readFolder) if (isfile(join(readFolder, f)) and fileFormat in f)]
     return filenames
 
@@ -276,52 +276,88 @@ def _get_control_params(modelParams):
         modelParams['seqIDs'] = seqIDtest
     return modelParams
 
-def evaluate(modelParams, prevPParam=list()):
+def evaluate(modelParamsList, prevPParam=list()):
     # Read all prediction posefiles and sort them based on the seqID and frameID
-    pFilenames = _get_file_names(modelParams['tMatDir'], "")
-    predPoses = _get_all_predictions(pFilenames, modelParams)
-    pParamList = list()
+    seqIDs = modelParamsList[0]['seqIDs']
+    predPosesList = list()
+    gtPosePathList = list()
+    print("Reading predictions from files")
+    for trnItr in range(len(modelParamsList)):
+        print("          Pred Iteration ", str(trnItr+1))
+        modelParams = modelParamsList[trnItr]
+        pFilenames = _get_file_names(modelParams['tMatDir'], "")
+        predPosesList.append(_get_all_predictions(pFilenames, modelParams))
     # For each sequence
-    for i in range(len(modelParams['seqIDs'])):
+    for i in range(len(seqIDs)):
+        PParamList = list()
+        pMapSeqList = list()
+        pMapSeqWgtFramesList = list()
         print("Processing sequences: {0} / {1}".format(i+1, len(modelParams['seqIDs'])))
-        ###### Read groundtruth posefile for a seqID
-        # create map
-        gtPosePath = kitti.get_pose_path(modelParams['gTruthDir'], modelParams['seqIDs'][i])
-        gtPose = kitti.get_pose_data(gtPosePath)
-        gtParam = _get_param_from_pose(gtPose)
-        print("GT pose count:", len(gtPose))
-        #print("GT params count:", len(gtParam))
-        gtMapOrig = _get_gt_map(gtPose) # w.r.t. Original
-        #vis_path(gtMapOrig, 'GTORIG')
-        #gtMapSeq = _get_gt_map_seq(gtPose) # w.r.t. sequential
-        #vis_path(gtMapSeq, 'GTSEQ')
-        #gtMapBack = _get_gt_map_backwards(gtPose) # w.r.t. Backwards
-        #vis_path(gtMapBack, 'GTBACK')
-        #vis_path_all(gtMapOrig, gtMapSeq, gtMapBack, ['GTORIG', 'GTSEQ', 'GTBACK'])
-        ###### Get prediction map
-        # create map
-        pPoseParam = _get_prediction(predPoses, modelParams['seqIDs'][i])
-        print("Pred params count:", len(pPoseParam))
-        pParam = list()
-        for j in range(len(pPoseParam)):
-            pParam.append(pPoseParam[j]['tmat'])
-        pParam = np.array(pParam)
-        if (len(prevPParam) != 0):
-            print("SUMMING UP")
-            pParam += prevPParam[i]
-        print("Abs error:", np.sum(np.abs(pParam-np.array(gtParam)), axis=0))
-        print("+/- error:", np.sum((pParam-np.array(gtParam)), axis=0))
-        pParamList.append(pParam)
-        pPose = _get_pose_from_param(pParam)
-        # Use only sequential
-        pMapSeq = _get_p_map_w_orig(pPose, gtPose)
-        # Use GTforLoc
-        pMapSeqWgtFrames = _get_p_map_w_orig_points(pPose, gtPose)
-        
+        for trnItr in range(len(modelParamsList)):
+            modelParams = modelParamsList[trnItr]
+            predPoses = predPosesList[trnItr]
+            ###### Read groundtruth posefile for a seqID
+            # create map
+            # Get ground truth information (only once per sequence)
+            if trnItr == 0:
+                gtPosePath = kitti.get_pose_path(modelParams['gTruthDir'], modelParams['seqIDs'][i])
+                gtPose = kitti.get_pose_data(gtPosePath)
+                gtParam = _get_param_from_pose(gtPose)
+                #print("GT pose count:", len(gtPose))
+                #print("GT params count:", len(gtParam))
+                gtMapOrig = _get_gt_map(gtPose) # w.r.t. Original
+                #vis_path(gtMapOrig, 'GTORIG')
+                #gtMapSeq = _get_gt_map_seq(gtPose) # w.r.t. sequential
+                #vis_path(gtMapSeq, 'GTSEQ')
+                #gtMapBack = _get_gt_map_backwards(gtPose) # w.r.t. Backwards
+                #vis_path(gtMapBack, 'GTBACK')
+                #vis_path_all(gtMapOrig, gtMapSeq, gtMapBack, ['GTORIG', 'GTSEQ', 'GTBACK'])
+            ###### Get prediction map
+            # create map
+            pPoseParam = _get_prediction(predPoses, modelParams['seqIDs'][i])
+            print("   Iteration: {0}".format(trnItr+1))
+            print("         GT  pose  count  =", len(gtPose))
+            print("         Pred param count =", len(pPoseParam))
+            pParam = list()
+            for j in range(len(pPoseParam)):
+                pParam.append(pPoseParam[j]['tmat'])
+            pParam = np.array(pParam)
+            if (len(PParamList) != 0):
+                pParam = pParam + PParamList[trnItr-1]
+            print("         Abs error:", np.sum(np.abs(pParam-np.array(gtParam)), axis=0))
+            print("         +/- error:", np.sum((pParam-np.array(gtParam)), axis=0))
+            PParamList.append(pParam)
+            pPose = _get_pose_from_param(pParam)
+            # Use only sequential
+            pMapSeqList.append(_get_p_map_w_orig(pPose, gtPose))
+            # Use GTforLoc
+            pMapSeqWgtFramesList.append(_get_p_map_w_orig_points(pPose, gtPose))
+
         # Visualize both
-        vis_path_all(gtMapOrig, pMapSeq, pMapSeqWgtFrames, ['GT', 'PredSeq', 'PredSeqWgtFrames'])
-    return pParamList
+        print("   Displaying---")
+        vis_path_all_perSeq(gtMapOrig, pMapSeqList, pMapSeqWgtFramesList, ['GT', 'PredSeq', 'PSeqWgtFrms'])
+    return
 ################################
+def vis_path_all_perSeq(gtxyz, p1xyzList, p2xyzList, legendNamesx3):
+    import matplotlib.pyplot as plt
+    plotList = list()
+    legendNames = list()
+    legendNames.append(legendNamesx3[0])
+    gt, = plt.plot(gtxyz[0], gtxyz[1], 'r')
+    plotList.append(gt)
+    colorList1 = ['b', 'g', 'm', 'yellow']
+    colorList2 = ['c', 'mediumaquamarine', 'orchid', 'goldenrod']
+    for i in range(len(p1xyzList)):
+        pred1, = plt.plot(p1xyzList[i][0], p1xyzList[i][1], colorList1[i])
+        #pred2, = plt.plot(p2xyzList[i][0], p2xyzList[i][1], colorList2[i], alpha=0.5)
+        plotList.append(pred1)
+        legendNames.append(legendNamesx3[1]+"_"+str(i+1))
+        #plotList.append(pred2)
+        #legendNames.append(legendNamesx3[2]+"_"+str(i+1))
+        
+    plt.legend(plotList, legendNames)
+    plt.show()
+
 def vis_path_all(gtxyz, p1xyz, p2xyz, legendNamesx3):
     import matplotlib.pyplot as plt
     gt, = plt.plot(gtxyz[0], gtxyz[1], 'r')
@@ -338,15 +374,9 @@ def vis_path(xyz, graphType=""):
 
 
 def main(argv=None):  # pylint: disable=unused-argumDt
-    modelParams = read_model_params(jsonsToRead[0])
-    prevPred = evaluate(modelParams)
-    if (len(jsonsToRead)>1):
-        modelParams = read_model_params(jsonsToRead[1])
-        prevPred = evaluate(modelParams, prevPred)
-    if (len(jsonsToRead)>2):
-        modelParams = read_model_params(jsonsToRead[2])
-        prevPred = evaluate(modelParams, prevPred)
-    if (len(jsonsToRead)>3):
-        modelParams = read_model_params(jsonsToRead[3])
-        prevPred = evaluate(modelParams, prevPred)
+    modelParamsList = list()
+    for i in range(len(jsonsToRead)):
+        modelParamsList.append(read_model_params(jsonsToRead[i]))
+    evaluate(modelParamsList)
+
 main()
