@@ -361,11 +361,11 @@ def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bit
     pclList = pcl.tolist()
     # Target Transformation
     tMatTarget = tMatTarget.reshape(tMatTarget.shape[0]*(numTuples-1))
-    tMatTargetList = tMatTarget.tfnametolist()
+    tMatTargetList = tMatTarget.tolist()
 
-    bitTarget = bitTarget/reshape(bitTarget.shape[0]*bitTarget.shape[1]*bitTarget.shape[2])
-    bitTargetList = bitTarget.tolist()
-    rng = rng/reshape(rng.shape[0]*rng.shape[1]*rng.shape[2])
+    bitTarget = bitTarget.reshape(bitTarget.shape[0]*bitTarget.shape[1]*bitTarget.shape[2])
+    bitTargetList = bitTarget.tostring()
+    rng = rng.reshape(rng.shape[0]*rng.shape[1]*rng.shape[2])
     rngList = rng.tolist()
 
     writer = tf.python_io.TFRecordWriter(tfRecordPath)
