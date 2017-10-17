@@ -212,7 +212,7 @@ def tfrecord_writer(fileID,
 
 
 ########################## N-TUPLE
-def _get_ntuple(pcl, rows, cols, ntuple):
+def _get_pcl_ntuple(pcl, rows, cols, ntuple):
     """
     Decode and put point cloud in the right form. nx4
     """

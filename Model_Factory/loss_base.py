@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 import tensorflow as tf
+import numpy as np
 
 def add_loss_summaries(total_loss, batchSize):
     """Add summaries for losses in calusa_heatmap model.
@@ -70,9 +71,52 @@ def _l2_loss(pred, tval): # batchSize=Sne
     # decay terms (L2 loss).
     return tf.add_n(tf.get_collection('losses'), name='total_loss')
 
-def loss(pred, tval, lossFunction):
+
+def _weighted_L2_loss(tMatP, tMatT, activeBatchSize):
+    mask = np.array([[100, 100, 100, 1, 100, 100, 100, 1, 100, 100, 100, 1]], dtype=np.float32)
+    mask = np.repeat(mask, activeBatchSize, axis=0)
+    tMatP = tf.multiply(mask, tMatP)
+    tMatT = tf.multiply(mask, tMatT)
+    return _l2_loss(tMatP, tMatT)
+
+def _weighted_params_L2_loss(targetP, targetT, activeBatchSize):
+    # Alpha, Beta, Gamma are -Pi to Pi periodic radians - mod over pi to remove periodicity
+    #mask = np.array([[np.pi, np.pi, np.pi, 1, 1, 1]], dtype=np.float32)
+    #mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
+    #targetP = tf_mod(targetP, mask)
+    #targetT = tf_mod(targetT, mask)
+    # Importance weigting on angles as they have smaller values
+    mask = np.array([[100, 100, 100, 1, 1, 1]], dtype=np.float32)
+    #mask = np.array([[1000, 1000, 1000, 100, 100, 100]], dtype=np.float32)
+    mask = np.repeat(mask, activeBatchSize, axis=0)
+    targetP = tf.multiply(targetP, mask)
+    targetT = tf.multiply(targetT, mask)
+    return _l2_loss(targetP, targetT)
+
+def _weighted_params_L2_loss_nTuple(targetP, targetT, nTuple, activeBatchSize):
+    # Alpha, Beta, Gamma are -Pi to Pi periodic radians - mod over pi to remove periodicity
+    #mask = np.array([[np.pi, np.pi, np.pi, 1, 1, 1]], dtype=np.float32)
+    #mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
+    #targetP = tf_mod(targetP, mask)
+    #targetT = tf_mod(targetT, mask)
+    # Importance weigting on angles as they have smaller values
+    mask = np.array([[100, 100, 100, 1, 1, 1]], dtype=np.float32)
+    mask = np.repeat(mask, nTuple, axis=0).reshape((nTuple-1)*6)
+    mask = np.repeat(mask, activeBatchSize, axis=0)
+    targetP = tf.multiply(targetP, mask)
+    targetT = tf.multiply(targetT, mask)
+    return _l2_loss(targetP, targetT, **kwargs)
+
+def loss(pred, tval, **kwargs):
     """
     Choose the proper loss function and call it.
     """
+    lossFunction = kwargs.get('lossFunction')
     if lossFunction == 'L2':
         return _l2_loss(pred, tval)
+    if lossFunction == 'Weighted_L2_loss':
+        return _weighted_L2_loss(pred, tval, kwargs.get('activeBatchSize'))
+    if lossFunction == 'Weighted_Params_L2_loss':
+        return _weighted_params_L2_loss(pred, tval, kwargs.get('activeBatchSize'))
+    if lossFunction == 'Weighted_Params_L2_loss_nTuple':
+        return _weighted_params_L2_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
