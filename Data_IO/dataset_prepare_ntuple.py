@@ -375,56 +375,45 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
     bitB2AList = list()
     poseX20List = list()
     # pop the first in Tuples and append last as numTuple
-    for j in range(numTuples-1, len(pclFilenames)-1):
-        if (j == numTuples-1):
-            # get 0
-            xyzi = _get_pcl_XYZ(pclFolder + pclFilenames[0])
+    # j is the begining of the list
+    # k is the end of the list
+    k = -1
+    for j in range(0, len(pclFilenames)-(numTuples-1)):
+        # if there are less numTuples in the list, fill the list
+        # numTuples is at least 2
+        while (len(xyziList)<numTuples): # or could be said (k-j < numTuples-1)
+            k+=1 # k starts at -1
+            xyzi = _get_pcl_XYZ(pclFolder + pclFilenames[k])
             imgDepth, xyzi = get_depth_image_pano_pclView(xyzi)
+            poseX20List.append(_get_3x4_tmat(poseFile[k])) # k is always one step ahead of nPose, and same step as nPCL
             xyziList.append(xyzi)
             imgDepthList.append(imgDepth)
-            poseX20List.append(_get_3x4_tmat(poseFile[0]))
-            # read rest numTuples once
-            for i in range(1, numTuples):
-                xyzi = _get_pcl_XYZ(pclFolder + pclFilenames[i])
-                imgDepth, xyzi = get_depth_image_pano_pclView(xyzi)
-                xyziList.append(xyzi)
-                imgDepthList.append(imgDepth)
-                poseX20List.append(_get_3x4_tmat(poseFile[i]))
-                # get target pose  B->A also changes to abgxyz : get abgxyzb-abgxyza
-                pose_B2A = _get_tMat_B_2_A(poseX20List[i-1], poseX20List[i])
-                abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
-                poseB2AList.append(abgxyzB2A)
-                bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_min, BIN_SIZE)
-                bitB2AList.append(bit)
+            if k == 0:
+                continue # only one PCL and Pose are read
+                # makes sure first & second pcl and pose are read to have full transformation
+            # get target pose  B->A also changes to abgxyz : get abgxyzb-abgxyza
+            pose_B2A = _get_tMat_B_2_A(poseX20List[(k-j)-1], poseX20List[(k-j)]) # Use last two
+            abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
+            bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_min, BIN_SIZE)
+            poseB2AList.append(abgxyzB2A)
+            bitB2AList.append(bit)
         else:
+            # numTuples are read and ready to be dumped on permanent memory
+            fileID = [100+int(seqID), 100000+j, 100000+(k)] # k=j+(numTuples-1)
+            odometery_writer(fileID,# 3 ints
+                             xyziList,# ntuplex3xPCL_COLS
+                             imgDepthList,# ntuplex128x512
+                             poseB2AList,# (ntuple-1)x6
+                             bitB2AList,# (ntuple-1)x6x32
+                             tfRecFolder,
+                             numTuples) 
+            # Oldest smaple is to be forgotten
             xyziList.pop(0)
             imgDepthList.pop(0)
             poseB2AList.pop(0)
             bitB2AList.pop(0)
             poseX20List.pop(0)
-            # get i
-            xyzi = _get_pcl_XYZ(pclFolder + pclFilenames[j])
-            imgDepth, xyzi = get_depth_image_pano_pclView(xyzi)
-            xyziList.append(xyzi)
-            imgDepthList.append(imgDepth)
-            poseX20List.append(_get_3x4_tmat(poseFile[j]))
-            # get target pose  B->A also changes to abgxyz : get abgxyzb-abgxyza
-            pose_B2A = _get_tMat_B_2_A(poseX20List[numTuples-2], poseX20List[numTuples-1])
-            abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
-            poseB2AList.append(abgxyzB2A)
-            bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_min, BIN_SIZE)
-            bitB2AList.append(bit)
-
         
-        #
-        fileID = [int(seqID)+100, (j-(numTuples-1))+100000, j+100000]
-        odometery_writer(fileID,# 3 ints
-                         xyziList,# ntuplex3xPCL_COLS
-                         imgDepthList,# ntuplex128x512
-                         poseB2AList,# (ntuple-1)x6
-                         bitB2AList,# (ntuple-1)x6x32
-                         tfRecFolder,
-                         numTuples)
     print("SeqID completed : ", seqID)
     return
 ################################
@@ -461,7 +450,7 @@ def prepare_dataset(datasetType, pclFolder, poseFolder, seqIDs, tfRecFolder, num
     print("Starting datawrite")
     startTime = time.time()
     num_cores = multiprocessing.cpu_count() - 2
-    for j in range(0,len(pclFilenames)-numTuples):
+    for j in range(0,len(seqIDs)):
         process_dataset(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j)
     #Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j) for j in range(0,len(seqIDs)))
     

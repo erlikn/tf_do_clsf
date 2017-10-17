@@ -236,7 +236,7 @@ def train(modelParams):
         # What about adaptive mask to zoom into differences at each CNN stack !!!
         ########## model_cnn.loss is called in the loss function
         #loss = weighted_loss(targetP, targetT, **modelParams)
-        # modelParams[imageDepthChannels]-2 cuz we have n tuples and n-1 transitions => changing index to 0 means depth-2
+        # modelParams[imageDepthChannels]-2 => we have n tuples and n-1 transitions => changing index to 0 means depth-2
         loss = weighted_params_loss(targetP, targetT[:,:,modelParams['imageDepthChannels']-2], **modelParams)
         # pcl based loss
         #loss = pcl_params_loss(pclA, targetP, targetT, **modelParams)
