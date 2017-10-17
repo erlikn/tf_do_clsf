@@ -452,9 +452,9 @@ def prepare_dataset(datasetType, pclFolder, poseFolder, seqIDs, tfRecFolder, num
     print("Starting datawrite")
     startTime = time.time()
     num_cores = multiprocessing.cpu_count() - 2
-    for j in range(0,len(seqIDs)):
-        process_dataset(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j)
-    #Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j) for j in range(0,len(seqIDs)))
+    #for j in range(0,len(seqIDs)):
+    #    process_dataset(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j)
+    Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j) for j in range(0,len(seqIDs)))
     
     print('Done')
 
