@@ -403,6 +403,9 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     #print('Test  Warp Output: %s' % modelParams['warpedTestDataDir'])
     print('')
     print('')
+
+    print('Train Main is built and Dataset is complied with n = 2 tuples!!!')
+    print('')
     if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
         print("Please consider changing logs directory in order to avoid overwrite!")
         return

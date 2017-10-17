@@ -455,9 +455,7 @@ def prepare_dataset(datasetType, pclFolder, poseFolder, seqIDs, tfRecFolder, num
     #for j in range(0,len(seqIDs)):
     #    process_dataset(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j)
     Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j) for j in range(0,len(seqIDs)))
-    
     print('Done')
-
 
 ############# PATHS
 import os
@@ -471,8 +469,8 @@ posePath = '../Data/kitti/poses/'
 seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
 seqIDtest = ['09', '10']
 
-traintfRecordFLD = "../Data/kitti/train_tfrec_nt_"+str(NUM_TUPLES)+"_clsf/"
-testtfRecordFLD = "../Data/kitti/test_tfrec_nt_"+str(NUM_TUPLES)+"_clsf/"
+traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf/"
+testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf"
 
 ##def main():
 #    #find_max_mins("train", pclPath, posePath, seqIDtrain)
