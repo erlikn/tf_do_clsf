@@ -379,6 +379,8 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
     # k is the end of the list
     k = -1
     for j in range(0, len(pclFilenames)-(numTuples-1)):
+        if j%100==0:
+            print("Sequence ",i,"  Progress ",j,"/",len(pclFilenames)-(numTuples-1))
         # if there are less numTuples in the list, fill the list
         # numTuples is at least 2
         while (len(xyziList)<numTuples): # or could be said (k-j < numTuples-1)
