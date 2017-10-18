@@ -88,8 +88,8 @@ reCompileJSON = True
 
 def write_iterative(runName, itrNum, dataLocal):
     # Twin Correlation Matching Common Parameters
-    trainLogDirBase = '../Data/kitti/logs/tfdh_iterative_logs/train_logs/'
-    testLogDirBase = '../Data/kitti/logs/tfdh_iterative_logs/test_logs/'
+    trainLogDirBase = '../Data/kitti/logs/tfdh_iter_clsf_logs/train_logs/'
+    testLogDirBase = '../Data/kitti/logs/tfdh_iter_clsf_logs/test_logs/'
 
     dataLocal['writeWarpedImages'] = True
 
@@ -125,7 +125,7 @@ def itr_170706_ITR_B_inception(reCompileITR, trainLogDirBase, testLogDirBase, ru
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
         data['outputSize'] = 6
-        data['lossFunction'] = "Weighted_L2_loss"
+        data['lossFunction'] = "Weighted_Params_L2_loss_nTuple_last"
         data['numTuple'] = 2
         
         runName = runPrefix+str(itrNum)
@@ -165,7 +165,7 @@ def itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
         data['testBatchSize'] = 32
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
-        data['outputSize'] = 6
+        data['outputSize'] = 6*data['classificationModel']['binSize']
         data['lossFunction'] = "Weighted_Params_L2_loss_nTuple_last"
         data['numTuple'] = 2
         
