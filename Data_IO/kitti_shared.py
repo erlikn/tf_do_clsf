@@ -316,10 +316,16 @@ def remove_trailing_zeros(xyz):
 
 ############################################################################
 def get_multi_bit_target(pose, BIN_rng, BIN_min, BIN_SIZE):
-    bit = np.zeros(shape=[len(BIN_min), BIN_SIZE], dtype=np.int8)
+    '''
+    pose: target n=6 dof pose
+    BIN_rng: n=6 * BIN_SIZE=32 matrix showing 32 bins for each dimension of pose
+    BIN_min: 
+    BIN_SIZE: 32, number of the bins for each dimension of pose
+    '''
+    bits = np.zeros(shape=[len(BIN_min), BIN_SIZE], dtype=np.int8)
     for labdex in range(len(BIN_min)):
         for bindex in range(BIN_SIZE+1):
             if (pose[labdex] < BIN_rng[labdex][bindex]):
-                bit[labdex][bindex-1] = 1
+                bits[labdex][bindex-1] = 1
                 break
-    return bit
+    return bits

@@ -52,7 +52,6 @@ for i in range(len(BIN_min)):
     BIN_rng.append(np.append(np.arange(BIN_min[i],BIN_max[i], (BIN_max[i]-BIN_min[i])/BIN_SIZE), [BIN_max[i]], axis=0))
 BIN_rng = np.asarray(BIN_rng, np.float32)
 
-
 def image_process_subMean_divStd(img):
     out = img - np.mean(img)
     out = out / img.std()
