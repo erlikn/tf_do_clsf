@@ -86,7 +86,7 @@ def odometery_writer(ID,
     else:
         raise Exception('numTuples is less or equal to 1. BIN_rng is should be altered...')
     filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
-     tfrecord_io.tfrecord_writer_ntuple_classification(ID,
+    tfrecord_io.tfrecord_writer_ntuple_classification(ID,
                                 pclNumpy,
                                 imgDepthNumpy,
                                 tMatTargetNumpy,
@@ -297,7 +297,7 @@ def _get_tMat_B_2_A(tMatA2o, tMatB2o):
     return tMatB2A
 
 def _get_tMat_B_2_O(tMatA2o, tMatA2B):
-    '''_get_ntuple
+    '''
     tMatA2o A -> O (target pcl will be in O), tMatA2B A -> B (source pcl is in B)
     return tMat B -> O
     '''
@@ -329,7 +329,7 @@ def _get_pcl_XYZ(filePath):
     #               0 = left/right, 1 = up/down, 2 = in/out
     while f.readable():
         xyzi = f.read(4*4)
-        if len(xyzi) == 16:_get_ntuple
+        if len(xyzi) == 16:
             row = struct.unpack('f'*4, xyzi)
             if j%1 == 0:
                 pclpoints.append([-1*row[1], -1*row[2], row[0]]) # row[3] is intensity and not used
@@ -396,7 +396,7 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
             pose_B2A = _get_tMat_B_2_A(poseX20List[(k-j)-1], poseX20List[(k-j)]) # Use last two
             abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
             bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_SIZE)
-            poseB2AList.a_get_ntupleppend(abgxyzB2A)
+            poseB2AList.append(abgxyzB2A)
             bitB2AList.append(bit)
         else:
             # numTuples are read and ready to be dumped on permanent memory
