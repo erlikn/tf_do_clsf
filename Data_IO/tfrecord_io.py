@@ -212,6 +212,15 @@ def tfrecord_writer(fileID,
 
 
 ########################## N-TUPLE
+def _get_ntuple(pcl, rows, cols, ntuple):
+    """
+    Decode and put point cloud in the right form. nx4
+    """
+    #pcl = tf.decode_raw(pcl, tf.float32)
+    pcl = tf.reshape(pcl, [rows, cols, ntuple])
+    pcl.set_shape([rows, cols, ntuple])
+    return pcl
+
 def _get_pcl_ntuple(pcl, rows, cols, ntuple):
     """
     Decode and put point cloud in the right form. nx4
@@ -267,48 +276,7 @@ def parse_example_proto_ntuple(exampleSerialized, **kwargs):
     # However, they will be kept to unify matrix col size for valid tensor operations 
     return images, pcl, target, fileID
 
-def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
-    """
-    Converts a dataset to tfrecords
-    fileID = seqID, i, i+1
-    imgDepth => int8 a.k.a. char (numTuple x 128 x 512)
-    tMatTarget => will be converted to float32 with size numTuple x 6
-    pcl => will be converted to float16 with size (numTuple x 3 x PCLCOLS)
-    """
-    """
-    KWARGS:
-        imageDepthRows = 128
-        imageDepthCols = 512
-        imageDepthChannels = ntuple
 
-        pclRows = 3
-        pclCols = 62074
-
-        targetABGXYZ = ntupleX6
-    """
-    numTuples = kwargs.get('numParallelModules')
-    featureMap = {
-        'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
-        'images': tf.FixedLenFeature([], dtype=tf.string),
-        'pcl': tf.FixedLenFeature([kwargs.get('pclRows')*kwargs.get('pclCols')*numTuples], dtype=tf.float32),
-        'targetn6': tf.FixedLenFeature([6*(numTuples-1)], dtype=tf.float32),
-        'bitTarget': tf.FixedLenFeature([], dtype=tf.string),
-        'rngs': tf.FixedLenFeature([6*32*(numTuples-1)], dtype=tf.float32)
-        }
-    features = tf.parse_single_example(exampleSerialized, featureMap)
-    fileID = features['fileID']
-    images = _decode_byte_image(features['images'],
-                                kwargs.get('imageDepthRows'),
-                                kwargs.get('imageDepthCols'),
-                                kwargs.get('imageDepthChannels'))
-    pcl = _get_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
-    target = _get_target_ntuple(features['targetn6'], kwargs.get('outputSize'), numTuples-1)
-    bitTarget = _decode_byte_string(features['images'], 6,32,(numTuples-1))
-    rngs = _get_ntuple(features['rngs'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples-1)
-
-    # PCLs will hold padded [0, 0, 0, 0] points at the end that will be ignored during usage
-    # However, they will be kept to unify matrix col size for valid tensor operations 
-    return images, pcl, target, bitTarget, rngs, fileID
 def tfrecord_writer_ntuple(fileID, pcl, imgDepth, tMatTarget, tfRecFolder, numTuples, tfFileName):
     """
     Converts a dataset to tfrecords
@@ -340,6 +308,56 @@ def tfrecord_writer_ntuple(fileID, pcl, imgDepth, tMatTarget, tfRecFolder, numTu
         }))
     writer.write(example.SerializeToString())
     writer.close()
+
+
+
+############################################
+############################################
+############                  ##############
+############  CLASSIFICATION  ##############
+############                  ##############
+############################################
+############################################
+def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
+    """
+        Converts a dataset to tfrecords
+        fileID = seqID, i, i+1
+        imgDepth => int8 a.k.a. char (numTuple x 128 x 512)
+        tMatTarget => will be converted to float32 with size numTuple x 6
+        pcl => will be converted to float16 with size (numTuple x 3 x PCLCOLS)
+    """
+    """
+        KWARGS:
+            imageDepthRows = 128
+            imageDepthCols = 512
+            imageDepthChannels = ntuple
+            pclRows = 3
+            pclCols = 62074
+            targetABGXYZ = ntupleX6
+    """
+    numTuples = kwargs.get('numParallelModules')
+    featureMap = {
+        'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
+        'images': tf.FixedLenFeature([], dtype=tf.string),
+        'pcl': tf.FixedLenFeature([kwargs.get('pclRows')*kwargs.get('pclCols')*numTuples], dtype=tf.float32),
+        'targetn6': tf.FixedLenFeature([6*(numTuples-1)], dtype=tf.float32),
+        'bitTarget': tf.FixedLenFeature([], dtype=tf.string),
+        'rngs': tf.FixedLenFeature([6*32*(numTuples-1)], dtype=tf.float32)
+        }
+    features = tf.parse_single_example(exampleSerialized, featureMap)
+    fileID = features['fileID']
+    images = _decode_byte_image(features['images'],
+                                kwargs.get('imageDepthRows'),
+                                kwargs.get('imageDepthCols'),
+                                kwargs.get('imageDepthChannels'))
+    pcl = _get_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
+    target = _get_target_ntuple(features['targetn6'], kwargs.get('outputSize'), numTuples-1)
+    bitTarget = _decode_byte_string(features['bitTarget'], 6,32,(numTuples-1))
+    rngs = _get_ntuple(features['rngs'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples-1)
+
+    # PCLs will hold padded [0, 0, 0, 0] points at the end that will be ignored during usage
+    # However, they will be kept to unify matrix col size for valid tensor operations 
+    return images, pcl, target, bitTarget, rngs, fileID
 
 def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bitTarget, rng, tfRecFolder, numTuples, tfFileName):
     """

@@ -176,13 +176,16 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         sampleData = []
         for _ in range(numPreprocessThreads):
             # Parse a serialized Example proto to extract the image and metadata.
-            images, pcl, target, tfrecFileIDs = tfrecord_io.parse_example_proto_ntuple(exampleSerialized, **kwargs)
-            sampleData.append([images, pcl, target, tfrecFileIDs])
+            images, pcl, target, bitTarget, rngs, tfrecFileIDs = tfrecord_io.parse_example_proto_ntuple_classification(exampleSerialized, **kwargs)
+            sampleData.append([images, pcl, target, bitTarget, rngs, tfrecFileIDs])
         
-        batchImages, batchPcl, batchTarget, batchTFrecFileIDs = tf.train.batch_join(sampleData,
+        batchImages, batchPcl, batchTarget, batchBitTarget, batchRngs, batchTFrecFileIDs = tf.train.batch_join(sampleData,
                                                                     batch_size=kwargs.get('activeBatchSize'),
                                                                     capacity=2*numPreprocessThreads*kwargs.get('activeBatchSize'))
-    
+        print(batchImages.get_shape(), batchPcl.get_shape(),
+              batchTarget.get_shape(), batchBitTarget.get_shape(),
+              batchRngs.get_shape())
+
 
         batchImages = tf.cast(batchImages, tf.float32)
         # Display the training images in the visualizer.
@@ -190,7 +193,7 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         for i in range(kwargs.get('imageDepthChannels')):
             tf.summary.image('images_'+str(i)+'_', images[i])
         
-        return batchImages, batchPcl, batchTarget, batchTFrecFileIDs
+        return batchImages, batchPcl, batchTarget, batchBitTarget, batchRngs, batchTFrecFileIDs
 
 def inputs(**kwargs):
     """Construct input for DeepHomography_CNN evaluation using the Reader ops.
@@ -206,10 +209,10 @@ def inputs(**kwargs):
       ValueError: If no dataDir
     """
     with tf.device('/cpu:0'):
-        batchImages, batchPcl, batchTargetT, batchTFrecFileIDs = fetch_inputs(**kwargs)
+        batchImages, batchPcl, batchTargetT, batchBitTarget, batchRngs, batchTFrecFileIDs = fetch_inputs(**kwargs)
         
         if kwargs.get('usefp16'):
             batchImages = tf.cast(batchImages, tf.float16)
             batchPclA = tf.cast(batchPcl, tf.float16)
             batchTargetT = tf.cast(batchTargetT, tf.float16)
-    return batchImages, batchPcl, batchTargetT, batchTFrecFileIDs
+    return batchImages, batchPcl, batchTargetT, batchBitTarget, batchRngs, batchTFrecFileIDs

@@ -143,7 +143,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
         fireOutO = model_base.batch_norm('batch_norm', fireOutO, dtype)
     ############# FC3O layer with 3 outputs - Orientation
     fireOutO, prevExpandDimO = model_base.fc_regression_module('fc3O', fireOutO, prevExpandDimO,
-                                                             {'fc': kwargs.get('outputSize')/2},
+                                                             {'fc': kwargs.get('networkOutputSize')/2},
                                                              wd, **kwargs)
     ############# FC2O layer with 1024 outputs - Translation ##########################
     fireOutT, prevExpandDimT = model_base.fc_fire_module('fc2T', fireOut, prevExpandDim,
@@ -154,7 +154,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
         fireOutT = model_base.batch_norm('batch_norm', fireOutT, dtype)
     ############# FC3O layer with 3 outputs - Translation
     fireOutT, prevExpandDimT = model_base.fc_regression_module('fc2T', fireOutT, prevExpandDimT,
-                                                             {'fc': kwargs.get('outputSize')/2},
+                                                             {'fc': kwargs.get('networkOutputSize')/2},
                                                              wd, **kwargs)
     ####################################################
     # put together orientation and translation

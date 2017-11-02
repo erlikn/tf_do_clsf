@@ -124,7 +124,8 @@ def itr_170706_ITR_B_inception(reCompileITR, trainLogDirBase, testLogDirBase, ru
         data['testBatchSize'] = 32
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
-        data['outputSize'] = 6
+        data['logicalOutputSize'] = 6
+        data['networkOutputSize'] = data['logicalOutputSize']
         data['lossFunction'] = "Weighted_Params_L2_loss_nTuple_last"
         data['numTuple'] = 2
         
@@ -165,7 +166,8 @@ def itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
         data['testBatchSize'] = 32
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
-        data['outputSize'] = 6*data['classificationModel']['binSize']
+        data['logicalOutputSize'] = 6
+        data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
         data['lossFunction'] = "Weighted_Params_L2_loss_nTuple_last"
         data['numTuple'] = 2
         

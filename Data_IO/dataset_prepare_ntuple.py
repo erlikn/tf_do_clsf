@@ -469,7 +469,7 @@ seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01',
 seqIDtest = ['09', '10']
 
 traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf/"
-testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf"
+testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf/"
 
 ##def main():
 #    #find_max_mins("train", pclPath, posePath, seqIDtrain)

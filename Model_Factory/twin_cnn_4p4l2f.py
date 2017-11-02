@@ -137,7 +137,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
         fireOut = model_base.batch_norm('batch_norm', fireOut, dtype)
     ############# FC2 layer with 8 outputs
     fireOut, prevExpandDim = model_base.fc_regression_module('fc2', fireOut, prevExpandDim,
-                                                             {'fc': kwargs.get('outputSize')},
+                                                             {'fc': kwargs.get('networkOutputSize')},
                                                              wd, **kwargs)
     return fireOut
 

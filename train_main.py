@@ -224,7 +224,7 @@ def train(modelParams):
                                      trainable=False)
 
         # Get images and transformation for model_cnn.
-        images, pclA, targetT, tfrecFileIDs = data_input.inputs(**modelParams)
+        images, pclA, targetT, bitTarget, rngs, tfrecFileIDs = data_input.inputs(**modelParams)
         print('Input        ready')
         # Build a Graph that computes the HAB predictions from the
         # inference model.
@@ -237,7 +237,7 @@ def train(modelParams):
         ########## model_cnn.loss is called in the loss function
         #loss = weighted_loss(targetP, targetT, **modelParams)
         # modelParams[imageDepthChannels]-2 => we have n tuples and n-1 transitions => changing index to 0 means depth-2
-        loss = model_cnn.loss(targetP, targetT[:,:,modelParams['imageDepthChannels']-2], **modelParams)
+        loss = model_cnn.loss(targetP, bitTarget[:,:,modelParams['imageDepthChannels']-2], **modelParams)
         # pcl based loss
         #loss = pcl_params_loss(pclA, targetP, targetT, **modelParams)
 
