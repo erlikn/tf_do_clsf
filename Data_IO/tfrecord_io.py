@@ -271,7 +271,7 @@ def parse_example_proto_ntuple(exampleSerialized, **kwargs):
                                 kwargs.get('imageDepthCols'),
                                 kwargs.get('imageDepthChannels'))
     pcl = _get_pcl_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
-    target = _get_target_ntuple(features['targetn6'], kwargs.get('outputSize'), numTuples-1)
+    target = _get_target_ntuple(features['targetn6'], kwargs.get('logicalOutputSize'), numTuples-1)
     # PCLs will hold padded [0, 0, 0, 0] points at the end that will be ignored during usage
     # However, they will be kept to unify matrix col size for valid tensor operations 
     return images, pcl, target, fileID
@@ -349,11 +349,11 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
     images = _decode_byte_image(features['images'],
                                 kwargs.get('imageDepthRows'),
                                 kwargs.get('imageDepthCols'),
-                                kwargs.get('imageDepthChannels'))
+                                numTuples) # kwargs.get('imageDepthChannels'))
     pcl = _get_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
-    target = _get_target_ntuple(features['targetn6'], kwargs.get('outputSize'), numTuples-1)
-    bitTarget = _decode_byte_string(features['bitTarget'], 6,32,(numTuples-1))
-    rngs = _get_ntuple(features['rngs'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples-1)
+    target = _get_target_ntuple(features['targetn6'], kwargs.get('logicalOutputSize'), numTuples-1)
+    bitTarget = _decode_byte_string(features['bitTarget'], kwargs.get('logicalOutputSize'), kwargs.get('classificationModel').get('binSize'), (numTuples-1))
+    rngs = _get_ntuple(features['rngs'], kwargs.get('logicalOutputSize'), kwargs.get('classificationModel').get('binSize')+1, numTuples-1)
 
     # PCLs will hold padded [0, 0, 0, 0] points at the end that will be ignored during usage
     # However, they will be kept to unify matrix col size for valid tensor operations 
@@ -386,14 +386,14 @@ def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bit
     rng = rng.reshape(rng.shape[0]*rng.shape[1]*rng.shape[2])
     rngList = rng.tolist()
 
-    writer = tf.python_io.TFRecordWriter(tfRecordPath)
-    example = tf.train.Example(features=tf.train.Features(feature={
-        'fileID': _int64_array(fileID),
-        'images': _bytes_feature(flatImageList),
-        'pcl': _float_nparray(pclList), # 2D np array
-        'targetn6': _float_nparray(tMatTargetList), # 2D np array
-        'bitTarget': _bytes_feature(bitTargetList),
-        'rngs': _float_nparray(rngList)
-        }))
-    writer.write(example.SerializeToString())
-    writer.close()
+    #writer = tf.python_io.TFRecordWriter(tfRecordPath)
+    #example = tf.train.Example(features=tf.train.Features(feature={
+    #    'fileID': _int64_array(fileID),
+    #    'images': _bytes_feature(flatImageList),
+    #    'pcl': _float_nparray(pclList), # 2D np array
+    #    'targetn6': _float_nparray(tMatTargetList), # 2D np array
+    #    'bitTarget': _bytes_feature(bitTargetList),
+    #    'rngs': _float_nparray(rngList)
+    #    }))
+    #writer.write(example.SerializeToString())
+    #writer.close()

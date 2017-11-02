@@ -81,9 +81,8 @@ def odometery_writer(ID,
     bitTargetNumpy = np.asarray(bitTargetList)
     bitTargetNumpy = np.swapaxes(np.swapaxes(bitTargetNumpy,0,1),1,2) # convert d x h x w -> h x w x d
     ########### initial ranges are globally consistent
-    rngList = [BIN_rng, BIN_rng, BIN_rng, BIN_rng]
-    rngNumpy = np.asarray(rngList)
-    rngNumpy = np.swapaxes(np.swapaxes(rngNumpy,0,1),1,2) # convert d x h x w -> h x w x d
+    if numTuples>1:
+        rngNumpy = np.repeat(BIN_rng[:,:,np.newaxis], numTuples-1, axis=2)
 
     filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
     tfrecord_io.tfrecord_writer_ntuple_classification(ID,
@@ -271,7 +270,7 @@ def transform_pcl_2_origin(xyzi_col, tMat2o):
 ################################
 def _get_tMat_A_2_B(tMatA2o, tMatB2o):
     '''
-    tMatA2o A -> O (source pcl is in A), tMatB2o B -> O (target pcl will be in B)
+  ID  tMatA2o A -> O (source pcl is in A), tMatB2o B -> O (target pcl will be in B)
     return tMat A -> B
     '''
     # tMatA2o: A -> Orig
@@ -338,7 +337,7 @@ def _get_pcl_XYZ(filePath):
             #print('num pclpoints =', i)
             break
         j += 1
-        #if i == 15000:
+    #if i == 15000:
         #    break
     f.close()
     # convert to numpy
@@ -355,7 +354,7 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
         tMatAo (i): A->0
         tMatBo (i+1): B->0
         tMatAB (target): A->B  (i -> i+1) 
-    '''
+   ID '''
     '''
     Calculate the Yaw, Pitch, Roll from Rotation Matrix
     and extraxt dX, dY, dZ
@@ -395,7 +394,7 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
             # get target pose  B->A also changes to abgxyz : get abgxyzb-abgxyza
             pose_B2A = _get_tMat_B_2_A(poseX20List[(k-j)-1], poseX20List[(k-j)]) # Use last two
             abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
-            bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_min, BIN_SIZE)
+            bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_SIZE)
             poseB2AList.append(abgxyzB2A)
             bitB2AList.append(bit)
         else:
@@ -451,9 +450,9 @@ def prepare_dataset(datasetType, pclFolder, poseFolder, seqIDs, tfRecFolder, num
     print("Starting datawrite")
     startTime = time.time()
     num_cores = multiprocessing.cpu_count() - 2
-    #for j in range(0,len(seqIDs)):
-    #    process_dataset(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j)
-    Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j) for j in range(0,len(seqIDs)))
+    for j in range(0, len(seqIDs)):
+        process_dataset(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j)
+    #Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j) for j in range(0,len(seqIDs)))
     print('Done')
 
 ############# PATHS
