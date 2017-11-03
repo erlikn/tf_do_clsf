@@ -82,7 +82,7 @@ def odometery_writer(ID,
     bitTargetNumpy = np.swapaxes(np.swapaxes(bitTargetNumpy,0,1),1,2) # 6D_data x bins x n-1
     ########### initial ranges are globally consistent
     if numTuples>1:
-        rngNumpy = np.repeat(BIN_rng[:,:,np.newaxis], numTuples-1, axis=2) # 6D_data x bins x n-1
+        rngNumpy = np.repeat(BIN_rng[:,:,np.newaxis], numTuples-1, axis=2) # 6D_data x bins+1 x n-1
     else:
         raise Exception('numTuples is less or equal to 1. BIN_rng is should be altered...')
     filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])

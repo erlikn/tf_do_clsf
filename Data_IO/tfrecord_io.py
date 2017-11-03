@@ -386,14 +386,14 @@ def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bit
     rng = rng.reshape(rng.shape[0]*rng.shape[1]*rng.shape[2])
     rngList = rng.tolist()
 
-    #writer = tf.python_io.TFRecordWriter(tfRecordPath)
-    #example = tf.train.Example(features=tf.train.Features(feature={
-    #    'fileID': _int64_array(fileID),
-    #    'images': _bytes_feature(flatImageList),
-    #    'pcl': _float_nparray(pclList), # 2D np array
-    #    'targetn6': _float_nparray(tMatTargetList), # 2D np array
-    #    'bitTarget': _bytes_feature(bitTargetList),
-    #    'rngs': _float_nparray(rngList)
-    #    }))
-    #writer.write(example.SerializeToString())
-    #writer.close()
+    writer = tf.python_io.TFRecordWriter(tfRecordPath)
+    example = tf.train.Example(features=tf.train.Features(feature={
+        'fileID': _int64_array(fileID),
+        'images': _bytes_feature(flatImageList),
+        'pcl': _float_nparray(pclList), # 2D np array
+        'targetn6': _float_nparray(tMatTargetList), # 2D np array
+        'bitTarget': _bytes_feature(bitTargetList),
+        'rngs': _float_nparray(rngList)
+        }))
+    writer.write(example.SerializeToString())
+    writer.close()
