@@ -322,9 +322,11 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
     """
         Converts a dataset to tfrecords
         fileID = seqID, i, i+1
-        imgDepth => int8 a.k.a. char (numTuple x 128 x 512)
-        tMatTarget => will be converted to float32 with size numTuple x 6
-        pcl => will be converted to float16 with size (numTuple x 3 x PCLCOLS)
+        imgDepth => int8 a.k.a. char  (rows_128 x cols_512 x n)
+        tMatTarget => will be converted to float32 with size (6D_data x n-1)
+        bitTarget => (6D_data x bins x n-1)
+        rng => (6D_data x bins+1 x n-1)
+        pcl => will be converted to float16 with size  (rows_XYZ x cols_Points x n)
     """
     """
         KWARGS:
@@ -345,14 +347,20 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
         'rngs': tf.FixedLenFeature([6*32*(numTuples-1)], dtype=tf.float32)
         }
     features = tf.parse_single_example(exampleSerialized, featureMap)
+    # seqID, i, i+1
     fileID = features['fileID']
+    # (rows_128 x cols_512 x n)
     images = _decode_byte_image(features['images'],
                                 kwargs.get('imageDepthRows'),
                                 kwargs.get('imageDepthCols'),
                                 numTuples) # kwargs.get('imageDepthChannels'))
+    # (rows_XYZ x cols_Points x n)
     pcl = _get_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
+    # (6D_data x n-1)
     target = _get_target_ntuple(features['targetn6'], kwargs.get('logicalOutputSize'), numTuples-1)
+    # (6D_data x bins x n-1)
     bitTarget = _decode_byte_string(features['bitTarget'], kwargs.get('logicalOutputSize'), kwargs.get('classificationModel').get('binSize'), (numTuples-1))
+    # (6D_data x bins+1 x n-1)
     rngs = _get_ntuple(features['rngs'], kwargs.get('logicalOutputSize'), kwargs.get('classificationModel').get('binSize')+1, numTuples-1)
 
     # PCLs will hold padded [0, 0, 0, 0] points at the end that will be ignored during usage
@@ -363,9 +371,11 @@ def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bit
     """
     Converts a dataset to tfrecords
     fileID = seqID, i, i+1
-    imgDepth => int8 a.k.a. char (numTuple x 128 x 512)
-    tMatTarget => will be converted to float32 with size numTuple x 6
-    pcl => will be converted to float16 with size (numTuple x 3 x PCLCOLS)
+    imgDepth => int8 a.k.a. char  (rows_128 x cols_512 x n)
+    tMatTarget => will be converted to float32 with size (6D_data x n-1)
+    bitTarget => (6D_data x bins x n-1)
+    rng => (6D_data x bins+1 x n-1)
+    pcl => will be converted to float16 with size  (rows_XYZ x cols_Points x n)
     """
     tfRecordPath = tfRecFolder + tfFileName + ".tfrecords"
     # Depth Images
