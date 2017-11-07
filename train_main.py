@@ -59,7 +59,6 @@ tf.app.flags.DEFINE_integer('ProgressStepReportOutputWrite', 250,
 def _set_control_params(modelParams):
     modelParams['phase'] = PHASE
     #params['shardMeta'] = model_cnn.getShardsMetaInfo(FLAGS.dataDir, params['phase'])
-
     modelParams['existingParams'] = None
 
     if modelParams['phase'] == 'train':
@@ -68,7 +67,6 @@ def _set_control_params(modelParams):
         modelParams['numExamples'] = modelParams['numTrainDatasetExamples']
         modelParams['dataDir'] = modelParams['trainDataDir']
         modelParams['warpedOutputFolder'] = modelParams['warpedTrainDataDir']
-
     if modelParams['phase'] == 'test':
         modelParams['activeBatchSize'] = modelParams['testBatchSize']
         modelParams['maxSteps'] = modelParams['testMaxSteps']
@@ -78,133 +76,8 @@ def _set_control_params(modelParams):
     return modelParams
 ####################################################
 ####################################################
-################### introducing new op for mod
-def np_mod(x,y):
-    return (x % y).astype(np.float32)
-
-def modgrad(op, grad):
-    x = op.inputs[0] # the first argument (normally you need those to calculate the gradient, like the gradient of x^2 is 2x. )
-    y = op.inputs[1] # the second argument
-    return grad * 1, grad * tf.negative(tf.floordiv(x, y)) #the propagated gradient with respect to the first and second argument respectively
-
-def py_func(func, inp, Tout, stateful=True, name=None, grad=None):
-    # Need to generate a unique name to avoid duplicates:
-    rnd_name = 'PyFuncGrad' + str(np.random.randint(0, 1E+8))
-    tf.RegisterGradient(rnd_name)(grad)  # see _MySquareGrad for grad example
-    g = tf.get_default_graph()
-    with g.gradient_override_map({"PyFunc": rnd_name}):
-        return tf.py_func(func, inp, Tout, stateful=stateful, name=name)
-
-from tensorflow.python.framework import ops
-def tf_mod(x,y, name=None):
-
-    with ops.op_scope([x,y], name, "mod") as name:
-        z = py_func(np_mod,
-                        [x,y],
-                        [tf.float32],
-                        name=name,
-                        grad=modgrad)  # <-- here's the call to the gradient
-        return z[0]
-
-@tf.RegisterGradient("mod")
-def _sub_grad(unused_op, grad):
-  return grad, tf.negative(grad)
-###################
-def weighted_loss(tMatP, tMatT, **kwargs):
-    mask = np.array([[100, 100, 100, 1, 100, 100, 100, 1, 100, 100, 100, 1]], dtype=np.float32)
-    mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
-    tMatP = tf.multiply(mask, tMatP)
-    tMatT = tf.multiply(mask, tMatT)
-    return model_cnn.loss(tMatP, tMatT, **kwargs) 
-
-def weighted_params_loss(targetP, targetT, **kwargs):
-    # Alpha, Beta, Gamma are -Pi to Pi periodic radians - mod over pi to remove periodicity
-    #mask = np.array([[np.pi, np.pi, np.pi, 1, 1, 1]], dtype=np.float32)
-    #mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
-    #targetP = tf_mod(targetP, mask)
-    #targetT = tf_mod(targetT, mask)
-    # Importance weigting on angles as they have smaller values
-    mask = np.array([[100, 100, 100, 1, 1, 1]], dtype=np.float32)
-#    mask = np.array([[1000, 1000, 1000, 100, 100, 100]], dtype=np.float32)
-    mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
-    targetP = tf.multiply(targetP, mask)
-    targetT = tf.multiply(targetT, mask)
-    return model_cnn.loss(targetP, targetT, **kwargs) 
-
-def pcl_loss(pclA, tMatP, tMatT, **kwargs): # batchSize=Sne
-    """
-    Generate a ground truth point cloud using ground truth transformation
-    Generate a prediction point cloud using predicted transformation
-    L2 difference between ground truth and predicted point cloud is the loss value
-    """
-    # pclA, tMatP, tMatT are in batches
-    ## # tMatP, tMatT should get a 0,0,0,1 row and be reshaped to 4x4
-    ## tMatP = tf.concat([tMatP, tf.constant(np.repeat(np.array([[0, 0, 0, 1]],
-    ##                                                          dtype=np.float32),
-    ##                                                 kwargs.get('activeBatchSize'),
-    ##                                                 axis=0))],
-    ##                   1)
-    ## tMatT = tf.concat([tMatT, tf.constant(np.repeat(np.array([[0, 0, 0, 1]],
-    ##                                                          dtype=np.float32),
-    ##                                                 kwargs.get('activeBatchSize'),
-    ##                                                 axis=0))],
-    ##                   1)
-    tMatP = tf.reshape(tMatP, [kwargs.get('activeBatchSize'), 4, 4])
-    tMatT = tf.reshape(tMatT, [kwargs.get('activeBatchSize'), 4, 4])
-    # pclA should get a row of ones
-    pclA = tf.concat([pclA, tf.constant(np.ones([kwargs.get('activeBatchSize'), 1, kwargs.get('pclCols')],
-                                                dtype=np.float32))],
-                     1)
-    pclP = tf.matmul(tMatP, pclA)
-    pclT = tf.matmul(tMatT, pclA)
-    return model_cnn.loss(pclP, pclT, **kwargs)
-
-def pcl_params_loss(pclA, pred, target, **kwargs): # batchSize=Sne
-    """
-    Generate transformation matrix using parameters for both prediction and ground truth
-    Generate a ground truth point cloud using ground truth transformation
-    Generate a prediction point cloud using predicted transformation
-    L2 difference between ground truth and predicted point cloud is the loss value
-    """
-    print('paramsLoss')
-    # pclA, tMatP, tMatT are in batches
-    # tMatP, tMatT should get a 0,0,0,1 row and be reshaped to 4x4
-    # transpose to easily extract columns: batchSize x 6 -> 6 x batchSize
-    pred = tf.transpose(pred)
-    target = tf.transpose(target)
-    # generate tMatP and tMatT: 12 x batchSize
-    a = pred[0]
-    b = pred[1]
-    g = pred[2]
-    dx = pred[3]
-    dy = pred[4]
-    dz = pred[5]
-    tMatP = tf.get_variable('tMatP', shape=[16,modelParams['activeBatchSize']], initializer=tf.constant_initializer(0.0), dtype=tf.float32, trainable=False)
-    tMatP = tf.Variable([
-              tf.cos(pred[0])*tf.cos(pred[1]), (tf.cos(pred[0])*tf.sin(pred[1])*tf.sin(pred[2]))-(tf.sin(pred[0])*tf.cos(pred[2])), (tf.cos(pred[0])*tf.sin(pred[1])*tf.cos(pred[2]))+(tf.sin(pred[0])*tf.sin(pred[2])), pred[3],
-              tf.sin(pred[0])*tf.cos(pred[1]), (tf.sin(pred[0])*tf.sin(pred[1])*tf.sin(pred[2]))+(tf.cos(pred[0])*tf.cos(pred[2])), (tf.sin(pred[0])*tf.sin(pred[1])*tf.cos(pred[2]))-(tf.cos(pred[0])*tf.sin(pred[2])), pred[4],
-              -tf.sin(pred[1]),                tf.cos(pred[1])*tf.sin(pred[2]),                                                     tf.cos(pred[1])*tf.cos(pred[2]),                                                     pred[5],
-              pred[0]*0,                 pred[0]*0,                                                   pred[0]*0,                                                 pred[0]*0+1
-            ], dtype=tf.float32, name='tMatP', trainable=False)
-    a = target[0]
-    b = target[1]
-    g = target[2]
-    dx = target[3]
-    dy = target[4]
-    dz = target[5]
-    tMatT = tf.get_variable('tMatT', shape=[16,modelParams['activeBatchSize']], initializer=tf.constant_initializer(0.0), dtype=tf.float32, trainable=False)
-    tMatT = tf.Variable([
-              tf.cos(target[0])*tf.cos(target[1]), (tf.cos(target[0])*tf.sin(target[1])*tf.sin(target[2]))-(tf.sin(target[0])*tf.cos(target[2])), (tf.cos(target[0])*tf.sin(target[1])*tf.cos(target[2]))+(tf.sin(target[0])*tf.sin(target[2])), target[3],
-              tf.sin(target[0])*tf.cos(target[1]), (tf.sin(target[0])*tf.sin(target[1])*tf.sin(target[2]))+(tf.cos(target[0])*tf.cos(target[2])), (tf.sin(target[0])*tf.sin(target[1])*tf.cos(target[2]))-(tf.cos(target[0])*tf.sin(target[2])), target[4],
-              -tf.sin(target[1]),          tf.cos(pred[1])*tf.sin(target[2]),                                   tf.cos(target[1])*tf.cos(target[2]),                                   target[5],
-              target[0]*0,                 target[0]*0,                                                   target[0]*0,                                                 target[0]*0+1
-           ], dtype=tf.float32, name='tMatT', trainable=False)
-    # convert tMat's to correct form: 12 x batchSize -> batchSize x 12
-    tMatP = tf.transpose(tMatP)
-    tMatT = tf.transpose(tMatT)
-    print('paramsLossDone')
-
-    return pcl_loss(pclA, tMatP, tMatT, **kwargs)
+####################################################
+####################################################
 ####################################################
 ####################################################
 def train(modelParams):

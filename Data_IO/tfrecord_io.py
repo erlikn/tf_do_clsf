@@ -212,14 +212,13 @@ def tfrecord_writer(fileID,
 
 
 ########################## N-TUPLE
-def _get_ntuple(pcl, rows, cols, ntuple):
+def _get_ntuple(data, rows, cols, ntuple):
     """
-    Decode and put point cloud in the right form. nx4
+    Put data in the right form.
     """
-    #pcl = tf.decode_raw(pcl, tf.float32)
-    pcl = tf.reshape(pcl, [rows, cols, ntuple])
-    pcl.set_shape([rows, cols, ntuple])
-    return pcl
+    data = tf.reshape(data, [rows, cols, ntuple])
+    data.set_shape([rows, cols, ntuple])
+    return data
 
 def _get_pcl_ntuple(pcl, rows, cols, ntuple):
     """
@@ -302,7 +301,7 @@ def tfrecord_writer_ntuple(fileID, pcl, imgDepth, tMatTarget, tfRecFolder, numTu
     writer = tf.python_io.TFRecordWriter(tfRecordPath)
     example = tf.train.Example(features=tf.train.Features(feature={
         'fileID': _int64_array(fileID),
-        'images': _bytes_feature(flatImageList),
+        'images': _bytets_feature(flatImageList),
         'pcl': _float_nparray(pclList), # 2D np array
         'targetn6': _float_nparray(tMatTargetList) # 2D np array
         }))
@@ -342,9 +341,9 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
         'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
         'images': tf.FixedLenFeature([], dtype=tf.string),
         'pcl': tf.FixedLenFeature([kwargs.get('pclRows')*kwargs.get('pclCols')*numTuples], dtype=tf.float32),
-        'targetn6': tf.FixedLenFeature([6*(numTuples-1)], dtype=tf.float32),
+        'targetn6': tf.FixedLenFeature([kwargs.get('logicalOutputSize')*(numTuples-1)], dtype=tf.float32),
         'bitTarget': tf.FixedLenFeature([], dtype=tf.string),
-        'rngs': tf.FixedLenFeature([6*32*(numTuples-1)], dtype=tf.float32)
+        'rngs': tf.FixedLenFeature([kwargs.get('logicalOutputSize')*(kwargs.get('classificationModel').get('binSize')+1)*(numTuples-1)], dtype=tf.float32)
         }
     features = tf.parse_single_example(exampleSerialized, featureMap)
     # seqID, i, i+1
@@ -395,7 +394,7 @@ def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bit
     bitTargetList = bitTarget.tostring()
     rng = rng.reshape(rng.shape[0]*rng.shape[1]*rng.shape[2])
     rngList = rng.tolist()
-
+    
     writer = tf.python_io.TFRecordWriter(tfRecordPath)
     example = tf.train.Example(features=tf.train.Features(feature={
         'fileID': _int64_array(fileID),
