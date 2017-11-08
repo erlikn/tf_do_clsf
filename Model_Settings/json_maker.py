@@ -162,13 +162,13 @@ def itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
         data['imageDepthChannels'] = 2
         data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
         data['modelShape'] = [32, 64, 32, 64, 64, 128, 64, 128, 1024]
-        data['trainBatchSize'] = 32
-        data['testBatchSize'] = 32
+        data['trainBatchSize'] = 16
+        data['testBatchSize'] = 16
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
         data['logicalOutputSize'] = 6
         data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
-        data['lossFunction'] = "_params_classification_loss_nTuple"
+        data['lossFunction'] = "_params_classification_l2_loss_nTuple"
         data['numTuple'] = 2
         
         runName = runPrefix+str(itrNum)

@@ -130,7 +130,7 @@ def train(modelParams):
         #init = tf.initialize_all_variables()
         init = tf.global_variables_initializer()
 
-        opCheck = tf.add_check_numerics_ops()
+        #opCheck = tf.add_check_numerics_ops()
         # Start running operations on the Graph.
         config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
         config.gpu_options.allow_growth = True
