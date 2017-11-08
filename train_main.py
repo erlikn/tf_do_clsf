@@ -102,15 +102,14 @@ def train(modelParams):
         # Build a Graph that computes the HAB predictions from the
         # inference model.
         targetP = model_cnn.inference(images, **modelParams)
-
         # Calculate loss. 2 options:
 
         # use mask to get degrees significant
         # What about adaptive mask to zoom into differences at each CNN stack !!!
         ########## model_cnn.loss is called in the loss function
         #loss = weighted_loss(targetP, targetT, **modelParams)
-        # modelParams[imageDepthChannels]-2 => we have n tuples and n-1 transitions => changing index to 0 means depth-2
-        loss = model_cnn.loss(targetP, bitTarget[:,:,modelParams['imageDepthChannels']-2], **modelParams)
+        # CLASSIFICATION
+        loss = model_cnn.loss(targetP, bitTarget[:,:,:,0:modelParams['imageDepthChannels']-1], **modelParams)
         # pcl based loss
         #loss = pcl_params_loss(pclA, targetP, targetT, **modelParams)
 

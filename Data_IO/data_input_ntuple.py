@@ -182,9 +182,9 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
         batchImages, batchPcl, batchTarget, batchBitTarget, batchRngs, batchTFrecFileIDs = tf.train.batch_join(sampleData,
                                                                     batch_size=kwargs.get('activeBatchSize'),
                                                                     capacity=2*numPreprocessThreads*kwargs.get('activeBatchSize'))
-        print(batchImages.get_shape(), batchPcl.get_shape(),
-              batchTarget.get_shape(), batchBitTarget.get_shape(),
-              batchRngs.get_shape())
+        #print(batchImages.get_shape(), batchPcl.get_shape(),
+        #      batchTarget.get_shape(), batchBitTarget.get_shape(),
+        #      batchRngs.get_shape())
 
 
         batchImages = tf.cast(batchImages, tf.float32)

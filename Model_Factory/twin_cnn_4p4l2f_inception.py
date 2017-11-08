@@ -139,6 +139,11 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     fireOut, prevExpandDim = model_base.fc_regression_module('fc2', fireOut, prevExpandDim,
                                                              {'fc': kwargs.get('networkOutputSize')},
                                                              wd, **kwargs)
+
+    # kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize') = kwargs.get('classificationModel')['binSize']
+    fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize')), kwargs.get('numTuple')-1])
+    fireOut.set_shape([kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize')), kwargs.get('numTuple')-1])
+
     return fireOut
 
 def loss(pred, target, **kwargs): # batchSize=Sne

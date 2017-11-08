@@ -120,6 +120,20 @@ def _weighted_params_L2_loss_nTuple_all(targetP, targetT, nTuple, activeBatchSiz
     targetT = tf.multiply(targetT, mask)
     return _l2_loss(targetP, targetT)
 
+def _params_classification_loss_nTuple(targetP, targetT, nTuple, activeBatchSize):
+    # Alpha, Beta, Gamma are -Pi to Pi periodic radians - mod over pi to remove periodicity
+    #mask = np.array([[np.pi, np.pi, np.pi, 1, 1, 1]], dtype=np.float32)
+    #mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
+    #targetP = tf_mod(targetP, mask)
+    #targetT = tf_mod(targetT, mask)
+    # Importance weigting on angles as they have smaller values
+    #mask = np.array([[100, 100, 100, 1, 1, 1]], dtype=np.float32)
+    #mask = np.repeat(mask, nTuple-1, axis=0).reshape((nTuple-1)*6)
+    #mask = np.repeat(mask, activeBatchSize, axis=0)
+    #targetP = tf.multiply(targetP, mask)
+    #targetT = tf.multiply(targetT, mask)
+    return _l2_loss(targetP, targetT)
+
 def loss(pred, tval, **kwargs):
     """
     Choose the proper loss function and call it.
@@ -135,3 +149,7 @@ def loss(pred, tval, **kwargs):
         return _weighted_params_L2_loss_nTuple_last(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
     if lossFunction == 'Weighted_Params_L2_loss_nTuple_all':
         return _weighted_params_L2_loss_nTuple_all(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+    if lossFunction == '_params_classification_loss_nTuple':
+        print(pred.get_shape())
+        print(tval.get_shape())
+        return _params_classification_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))

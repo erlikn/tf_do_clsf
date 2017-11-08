@@ -168,7 +168,7 @@ def itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
         data['numTestDatasetExamples'] = 2790
         data['logicalOutputSize'] = 6
         data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
-        data['lossFunction'] = "Weighted_Params_L2_loss_nTuple_last"
+        data['lossFunction'] = "_params_classification_loss_nTuple"
         data['numTuple'] = 2
         
         runName = runPrefix+str(itrNum)
