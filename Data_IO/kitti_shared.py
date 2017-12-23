@@ -312,9 +312,8 @@ def remove_trailing_zeros(xyz):
     xyz = xyz.reshape([3, -1])
     return xyz
 
-
-
 ############################################################################
+# BIN_multi_bit_target
 def get_multi_bit_target(pose, BIN_rng, BIN_SIZE):
     '''
     pose: target n=6 dof pose
@@ -328,3 +327,17 @@ def get_multi_bit_target(pose, BIN_rng, BIN_SIZE):
                 bits[labdex][bindex-1] = 1
                 break
     return bits
+
+# BIN_ranges
+def get_multi_bit_ranges(BIN_max, BIN_min, BIN_SIZE):
+    BIN_rng = list()
+    for i in range(len(BIN_min)):
+        BIN_rng.append(np.append(np.arange(BIN_min[i], BIN_max[i], (BIN_max[i]-BIN_min[i])/BIN_SIZE), [BIN_max[i]], axis=0))
+    BIN_rng = np.asarray(BIN_rng, np.float32)
+    return BIN_rng
+
+def get_bin_min_max():
+    # return the updated min max ranges
+    BIN_min = [-0.021, -0.075, -0.027, -0.24, -0.20, -2.74]
+    BIN_max = [ 0.019,  0.084,  0.023,  0.30,  0.20, 0.018]
+    return BIN_max, BIN_min

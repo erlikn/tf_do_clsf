@@ -158,7 +158,13 @@ def train(modelParams):
         durationSumAll = 0
         for step in xrange(modelParams['maxSteps']):
             startTime = time.time()
-            _, lossValue = sess.run([opTrain, loss])
+            #_, lossValue = sess.run([opTrain, loss])
+            _, lossValue, bitPreEV = sess.run([opTrain, loss, targetP])
+            zzz = np.reshape(bitPreEV[0], (6,32))
+            print(zzz)
+            print(bitPreEV[0].shape)
+            for i in range(6):
+                print(zzz[i].sum())
             duration = time.time() - startTime
             durationSum += duration
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
