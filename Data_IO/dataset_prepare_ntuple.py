@@ -175,6 +175,7 @@ def _normalize_Z_weighted(z):
         else:
             z[i] = (0.15*(z[i]-60))+0.85
     return z
+
 def _make_image(depthview, rXYZ):
     '''
     Get depthview and generate a depthImage
@@ -227,6 +228,7 @@ def _make_image(depthview, rXYZ):
         depthImage[yidx, xidx] = depthview[2, idxs[i]]
         depthImage[yidx+1, xidx] = depthview[2, idxs[i]]
     return depthImage
+
 def get_depth_image_pano_pclView(xyzi, height=1.6):
     '''
     Gets a point cloud
@@ -312,6 +314,7 @@ def _get_tMat_B_2_O(tMatA2o, tMatA2B):
 
 def _get_3x4_tmat(poseRow):
     return poseRow.reshape([3,4])
+
 def _get_pcl_XYZ(filePath):
     '''
     Get a bin file address and read it into a numpy matrix
@@ -344,8 +347,6 @@ def _get_pcl_XYZ(filePath):
     # convert to numpy
     xyzi = np.array(pclpoints, dtype=np.float32)
     return xyzi.transpose()
-
-
 
 def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder,  numTuples, i):
     '''

@@ -161,10 +161,10 @@ def train(modelParams):
             #_, lossValue = sess.run([opTrain, loss])
             _, lossValue, bitPreEV = sess.run([opTrain, loss, targetP])
             zzz = np.reshape(bitPreEV[0], (6,32))
-            print(zzz)
-            print(bitPreEV[0].shape)
-            for i in range(6):
-                print(zzz[i].sum())
+            #print(zzz)
+            #print(bitPreEV[0].shape)
+            #for i in range(6):
+            #    print(zzz[i].sum())
             duration = time.time() - startTime
             durationSum += duration
             assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
@@ -197,38 +197,6 @@ def train(modelParams):
                             datetime.now()
                         )
                     )
-                
-        ######### USE LATEST STATE TO WARP IMAGES
-        ### outputDIR = modelParams['warpedOutputFolder']+'/'
-        ### outputDirFileNum = len([name for name in os.listdir(outputDIR) if os.path.isfile(os.path.join(outputDIR, name))])
-### 
-### 
-        ### durationSum = 0
-        ### durationSumAll = 0
-        ### if modelParams['writeWarpedImages']:
-        ###     lossValueSum = 0
-        ###     stepsForOneDataRound = int((modelParams['numExamples']/modelParams['activeBatchSize']))
-        ###     print('Warping %d images with batch size %d in %d steps' % (modelParams['numExamples'], modelParams['activeBatchSize'], stepsForOneDataRound))
-        ###     #for step in xrange(stepsForOneDataRound):
-        ###     step = 0
-        ###     while outputDirFileNum != 20400:
-        ###         startTime = time.time()
-        ###         evImages, evPclA, evPclB, evtargetT, evtargetP, evtfrecFileIDs, evlossValue = sess.run([images, pclA, pclB, targetT, targetP, tfrecFileIDs, loss])
-        ###         #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-        ###         data_output.output(evImages, evPclA, evPclB, evtargetT, evtargetP, evtfrecFileIDs, **modelParams)
-        ###         duration = time.time() - startTime
-        ###         durationSum += duration
-        ###         durationSumAll += duration
-        ###         # Print Progress Info
-        ###         if ((step % FLAGS.ProgressStepReportOutputWrite) == 0) or ((step+1) == stepsForOneDataRound):
-        ###             print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-        ###                     ((100*step)/stepsForOneDataRound, evlossValue/(step+1), durationSum/60, (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60)))
-        ###             #print('Total Elapsed: %.2f mins, Training Completion in: %.2f mins' % 
-        ###             #        durationSumAll/60, (((durationSumAll*stepsForOneDataRound)/(step+1))/60)-(durationSumAll/60))
-        ###         outputDirFileNum = len([name for name in os.listdir(outputDIR) if os.path.isfile(os.path.join(outputDIR, name))])
-        ###         step+=1
-        ###     print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (evlossValue/modelParams['activeBatchSize'], durationSum/(step*modelParams['activeBatchSize']), step))
-
 
 def _setupLogging(logPath):
     # cleanup

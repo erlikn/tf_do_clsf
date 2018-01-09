@@ -135,6 +135,21 @@ def _params_classification_l2_loss_nTuple(targetP, targetT, nTuple, activeBatchS
     targetT = tf.cast(targetT, tf.float32)
     return _l2_loss(targetP, targetT)
 
+def _params_classification_softmaxCrossentropy_loss_nTuple(targetP, targetT, nTuple, activeBatchSize):
+    '''
+    Takes in the targetP and targetT and calculates the softmax-cross entropy loss for each parameter
+    and sums them for each instance and sum again for each tuple in the batch
+    TargetT dimensions are [activeBatchSize, nTuple, rows=6, cols=32]
+    '''
+    targetT = tf.cast(targetT, tf.float32)
+    targetP = tf.cast(targetP, tf.float32)
+    ############################
+    # Alternatively, instead of sum, we could use squared_sum to penalize harsher
+    ############################
+    # Calculate softmax-cross entropy loss for each parameter (last dimension -> cols)
+    # Then calculate sum of parameter losses for each batch (last 2 dimensions -> ntuple, rows), and returns an array of [activeBatchSize] size  
+    return tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=targetP, labels=targetT), axis=[1,2])
+
 def loss(pred, tval, **kwargs):
     """
     Choose the proper loss function and call it.
@@ -152,3 +167,5 @@ def loss(pred, tval, **kwargs):
         return _weighted_params_L2_loss_nTuple_all(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
     if lossFunction == '_params_classification_l2_loss_nTuple':
         return _params_classification_l2_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+    if lossFunction == '_params_classification_softmaxCrossentropy_loss_nTuple':
+        return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
