@@ -121,6 +121,9 @@ def _weighted_params_L2_loss_nTuple_all(targetP, targetT, nTuple, activeBatchSiz
     return _l2_loss(targetP, targetT)
 
 def _params_classification_l2_loss_nTuple(targetP, targetT, nTuple, activeBatchSize):
+    '''
+    TargetT dimensions are [activeBatchSize, rows=6, cols=32, nTuple]
+    '''
     # Alpha, Beta, Gamma are -Pi to Pi periodic radians - mod over pi to remove periodicity
     #mask = np.array([[np.pi, np.pi, np.pi, 1, 1, 1]], dtype=np.float32)
     #mask = np.repeat(mask, kwargs.get('activeBatchSize'), axis=0)
@@ -139,16 +142,19 @@ def _params_classification_softmaxCrossentropy_loss_nTuple(targetP, targetT, nTu
     '''
     Takes in the targetP and targetT and calculates the softmax-cross entropy loss for each parameter
     and sums them for each instance and sum again for each tuple in the batch
-    TargetT dimensions are [activeBatchSize, nTuple, rows=6, cols=32]
+    TargetT dimensions are [activeBatchSize, rows=6, cols=32, nTuple]
     '''
     targetT = tf.cast(targetT, tf.float32)
     targetP = tf.cast(targetP, tf.float32)
     ############################
     # Alternatively, instead of sum, we could use squared_sum to penalize harsher
     ############################
-    # Calculate softmax-cross entropy loss for each parameter (last dimension -> cols)
-    # Then calculate sum of parameter losses for each batch (last 2 dimensions -> ntuple, rows), and returns an array of [activeBatchSize] size  
-    return tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=targetP, labels=targetT), axis=[1,2])
+    # ---> [activeBatchSize, rows=6, cols=32, nTuple]
+    # Calculate softmax-cross entropy loss for each parameter (cols dimension -> cols)
+    # ---> [activeBatchSize, rows=6, nTuple]
+    # Then calculate sum of parameter losses for each batch (last 2 dimensions -> ntuple, rows), and returns an array of [activeBatchSize] size
+    # ---> [activeBatchSize]
+    return tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), axis=[1,2])
 
 def loss(pred, tval, **kwargs):
     """

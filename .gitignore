@@ -2,4 +2,4 @@
 *.pyc
 *.save
 *.swp
-
+.vscode/

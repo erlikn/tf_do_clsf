@@ -160,7 +160,7 @@ def train(modelParams):
             startTime = time.time()
             #_, lossValue = sess.run([opTrain, loss])
             _, lossValue, bitPreEV = sess.run([opTrain, loss, targetP])
-            zzz = np.reshape(bitPreEV[0], (6,32))
+            #zzz = np.reshape(np.exp(bitPreEV[0]), (6,32))
             #print(zzz)
             #print(bitPreEV[0].shape)
             #for i in range(6):
@@ -240,6 +240,7 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     modelParams = _set_control_params(modelParams)
 
     print(modelParams['modelName'])
+    print('Training steps = %.1f' % float(modelParams['trainMaxSteps']))
     print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
     print('Train Input: %s' % modelParams['trainDataDir'])
     #print('Test  Input: %s' % modelParams['testDataDir'])

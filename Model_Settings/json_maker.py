@@ -70,7 +70,7 @@ data = {
     'trainBatchSize' : 16,
     'testBatchSize' : 16,
     'outputSize' : 6, # 6 Params
-    'trainMaxSteps' : 30000,
+    'trainMaxSteps' : 90000,
     'testMaxSteps' : 1,
     'usefp16' : False,
     'logDevicePlacement' : False,
