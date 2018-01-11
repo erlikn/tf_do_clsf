@@ -19,19 +19,27 @@ def get_range_weighted_scores(rngs, scores, maxRange):
         scores[bin] = (1/(rngs[bin+1]-rngs[bin]))*scores[bin]
     return scores
 
-def get_softmax(rngs, prob, maxRange):
+def get_softmax(rngs, scoresP, maxRange):
     # get softmax normalization  ===== vasucakkt exponential weighting
-    prob = get_range_weighted_scores(rngs, prob, maxRange)
-    prob = prob - np.max(prob)
-    sumExp = get_exp_sum(rngs, prob, maxRange) # finds sum of scores w.r.t ranges
+    scoresPWeighted = get_range_weighted_scores(rngs, scoresP, maxRange)
+    scoresPWeighted = scoresPWeighted - np.max(scoresPWeighted)
+    sumExp = get_exp_sum(rngs, scoresPWeighted, maxRange) # finds sum of scores w.r.t ranges
+    prob = scoresPWeighted.copy()
     for bin in range(0,maxRange): # converts scores to Softmax normalized vector
-        prob[bin] = np.exp(prob[bin]) / sumExp
+        prob[bin] = np.exp(scoresPWeighted[bin]) / sumExp
     sumProb = get_cdf(rngs, prob, maxRange) # calculates sum again that will always should be 1
     return prob, sumProb
 
-def get_new_ranges(rngs, prob, maxRange):
-    # get new ranges based on probabilites, so that new ranges have uniform probabilities
-    prob, sumWeightedProb = get_softmax(rngs, prob, maxRange)
+def get_new_ranges(rngs, targetP, maxRange):
+    '''
+    Get new ranges based on scores using weighted softmax probabilities, so that new ranges have uniform probabilities
+    Parameters:
+        rngs = current ranges to be updated
+        targetP = predicted logits of each range from network, to be converted to probabilities
+        maxRange = maximum number of bins for each parameter
+    '''
+    # Convert network predicted logits to probabilities
+    prob, sumWeightedProb = get_softmax(rngs, targetP, maxRange)
     probEach = sumWeightedProb/maxRange
     #print("each =", probEach)
     rngsOld = rngs.copy()
