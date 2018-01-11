@@ -104,6 +104,9 @@ def write_iterative(runName, itrNum, dataLocal):
     elif runName == '171003_ITR_B': # using 170706_ITR_B but with loss for all n-1 tuples
         data['classificationModel'] = {'Model' : True, 'binSize' : 32}
         itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+    elif runName == '180110_ITR_B': # using 171003_ITR_B but with softmax loss for all n-1 tuples
+        data['classificationModel'] = {'Model' : True, 'binSize' : 32}
+        itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
     else:
         print("--error: Model name not found!")
         return False
@@ -155,6 +158,48 @@ def itr_170706_ITR_B_inception(reCompileITR, trainLogDirBase, testLogDirBase, ru
         write_json_file(runName+'.json', data)
 
 def itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, data):
+    if reCompileITR:
+        runPrefix = runName+'_'
+        data['modelName'] = 'twin_cnn_4p4l2f_inception'
+        data['numParallelModules'] = 2
+        data['imageDepthChannels'] = 2
+        data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
+        data['modelShape'] = [32, 64, 32, 64, 64, 128, 64, 128, 1024]
+        data['trainBatchSize'] = 2#8#16
+        data['testBatchSize'] = 2#8#16
+        data['numTrainDatasetExamples'] = 20400
+        data['numTestDatasetExamples'] = 2790
+        data['logicalOutputSize'] = 6
+        data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
+        data['lossFunction'] = "_params_classification_l2_loss_nTuple"
+        data['numTuple'] = 2
+        
+        runName = runPrefix+str(itrNum)
+        ### Auto Iteration Number
+        if itrNum == 1:
+            data['trainDataDir'] = baseTrainDataDir
+            data['testDataDir'] = baseTestDataDir
+        ### Auto Iteration Number 2,3,4
+        if itrNum > 1:
+            data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+            data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+        ####
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = warpedTrainDirBase + runName
+        data['warpedTestDataDir'] = warpedTestDirBase+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['tMatTrainDir'] = data['trainLogDir']+'/target'
+        data['tMatTestDir'] = data['testLogDir']+'/target'
+        _set_folders(data['tMatTrainDir'])
+        _set_folders(data['tMatTestDir'])
+        data['warpOriginalImage'] = True
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+    
+def itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, data):
     if reCompileITR:
         runPrefix = runName+'_'
         data['modelName'] = 'twin_cnn_4p4l2f_inception'
