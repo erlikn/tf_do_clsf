@@ -17,7 +17,7 @@ import struct
 from scipy import spatial
 
 
-import kitti_shared_ext_clsf_range as clsf_range
+import Data_IO.kitti_shared_ext_clsf_range as clsf_range
 ############################################################################
 # xyz[0]/rXYZ out of [-1,1]  this is reveresd
 MIN_X_R = -1
