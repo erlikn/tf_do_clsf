@@ -16,6 +16,8 @@ import csv
 import struct
 from scipy import spatial
 
+
+import kitti_shared_ext_clsf_range as clsf_range
 ############################################################################
 # xyz[0]/rXYZ out of [-1,1]  this is reveresd
 MIN_X_R = -1
@@ -342,31 +344,5 @@ def get_bin_min_max():
     BIN_max = [ 0.019,  0.084,  0.023,  0.30,  0.20, 0.018]
     return BIN_max, BIN_min
 
-def get_new_ranges(rngs, prob, sumProb, maxRange):
-    # get new ranges based on probabilites, so that new ranges have uniform probabilities
-    probEach = sumProb/maxRange
-    #print("each =", probEach)
-    rngsOld = rngs.copy()
-    probLocal = 0
-    probRange = 0
-    iOld = 0
-    jNew = 1
-    while jNew<LOOP:
-        probLocal = (rngsOld[iOld+1]-rngsOld[iOld])*prob[iOld]
-        #print("cLoc", probLocal)
-        if probRange+probLocal < probEach:
-            probRange+=probLocal
-            iOld+=1
-        else:
-            probRem = probEach-probRange
-            hRng = (probRem/prob[iOld])+rngsOld[iOld]
-            #print("hRng", hRng)
-            #print("curRange=",probRange+(hRng*prob[iOld]))
-            rngs[jNew] = hRng
-            jNew+=1
-            rngsOld[iOld] = hRng
-            probRange = 0
-            #print("rngs=",rngs[0:jNew])
-            #print("rOld=",rngsOld[0:iOld])
-            #print("prob=",prob[0:iOld])
-    return rngs
+def get_updated_ranges(currentRanges, targetProbs, binSize):
+    return clsf_range.get_new_ranges(currentRanges, targetProbs, binSize)
