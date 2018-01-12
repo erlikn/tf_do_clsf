@@ -58,10 +58,10 @@ data = {
     'batchNorm' : True,
     'weightNorm' : False,
     'optimizer' : 'MomentumOptimizer', # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
+    'momentum' : 0.9,
     'initialLearningRate' : 0.005,
     'learningRateDecayFactor' : 0.1,
     'numEpochsPerDecay' : 10000.0,
-    'momentum' : 0.9,
     'epsilon' : 0.1,
     'dropOutKeepRate' : 0.5,
     'clipNorm' : 1.0,
@@ -70,7 +70,7 @@ data = {
     'trainBatchSize' : 16,
     'testBatchSize' : 16,
     'outputSize' : 6, # 6 Params
-    'trainMaxSteps' : 90000,
+    'trainMaxSteps' : 30000,
     'testMaxSteps' : 1,
     'usefp16' : False,
     'logDevicePlacement' : False,
@@ -213,9 +213,13 @@ def itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
         data['numTestDatasetExamples'] = 2790
         data['logicalOutputSize'] = 6
         data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
-        data['lossFunction'] = "_params_classification_l2_loss_nTuple"
+        data['lossFunction'] = "_params_classification_softmaxCrossentropy_loss_nTuple"
         data['numTuple'] = 2
         
+        ## runs
+        data['trainMaxSteps'] = 90000
+        data['numEpochsPerDecay'] = float(data['trainMaxSteps']/3)
+
         runName = runPrefix+str(itrNum)
         ### Auto Iteration Number
         if itrNum == 1:

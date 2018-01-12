@@ -20,10 +20,9 @@ from scipy import spatial
 from joblib import Parallel, delayed
 import multiprocessing
 
-import tfrecord_io
-import kitti_shared as kitti
+import Data_IO.tfrecord_io
+import Data_IO.kitti_shared as kitti
 
-NUM_TUPLES = 2
 
 # xyzi[0]/rXYZ out of [-1,1]  this is reveresd
 MIN_X_R = -1
@@ -469,8 +468,26 @@ posePath = '../Data/kitti/poses/'
 seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
 seqIDtest = ['09', '10']
 
-traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf/"
-testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf/"
+
+NUM_TUPLES = 5
+
+if NUM_TUPLES == 2:
+    traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf/"
+    testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf/"
+elif NUM_TUPLES == 5:
+    traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf_5tpl/"
+    testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf_5tpl/"
+else:
+    print("Folders for Num Tuples = ", NUM_TUPLES, "doesn't exist!!! (invalid option)")
+    exit()
+
+print("Num tuples = ", NUM_TUPLES)
+print("Train folder = ", traintfRecordFLD)
+print("Test folder = ", testtfRecordFLD)
+if input("(Overwrite WARNING) Is the Num Tuples set to correct value? (y) ") != "y":
+    print("Please consider changing it to avoid overwrite!")
+    exit()
+
 
 ##def main():
 #    #find_max_mins("train", pclPath, posePath, seqIDtrain)

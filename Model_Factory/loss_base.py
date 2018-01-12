@@ -51,7 +51,7 @@ def _l2_loss(pred, tval): # batchSize=Sne
     #l1_loss_mean = tf.reduce_mean(l1_loss, name='abs_loss_mean')
     #tf.add_to_collection('losses', l2_loss_mean)
 
-    l2_loss = tf.nn.l2_loss(tf.subtract(pred, tval), name="l2_loss")
+    l2_loss = tf.nn.l2_loss(tf.subtract(pred, tval), name="loss_l2")
     tf.add_to_collection('losses', l2_loss)
 
     #l2_loss_mean = tf.reduce_mean(l2_loss, name='l2_loss_mean')
@@ -69,7 +69,7 @@ def _l2_loss(pred, tval): # batchSize=Sne
 
     # The total loss is defined as the cross entropy loss plus all of the weight
     # decay terms (L2 loss).
-    return tf.add_n(tf.get_collection('losses'), name='total_loss')
+    return tf.add_n(tf.get_collection('losses'), name='loss_total')
 
 
 def _weighted_L2_loss(tMatP, tMatT, activeBatchSize):
@@ -154,7 +154,9 @@ def _params_classification_softmaxCrossentropy_loss_nTuple(targetP, targetT, nTu
     # ---> [activeBatchSize, rows=6, nTuple]
     # Then calculate sum of parameter losses for each batch (last 2 dimensions -> ntuple, rows), and returns an array of [activeBatchSize] size
     # ---> [activeBatchSize]
-    return tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), axis=[1,2])
+    smce_loss = tf.nn.l2_loss(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), name="loss_smce_l2")
+    #smce_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), name="loss_smce_sum")
+    return smce_loss
 
 def loss(pred, tval, **kwargs):
     """
