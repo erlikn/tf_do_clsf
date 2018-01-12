@@ -111,7 +111,7 @@ def write_iterative(runName, itrNum, dataLocal):
         itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
     elif runName == '180111_ITR_B': # using 171003_ITR_B but with softmax loss for all 5 tuples
         data['classificationModel'] = {'Model' : True, 'binSize' : 32}
-        itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+        itr_180111_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
     else:
         print("--error: Model name not found!")
         return False
