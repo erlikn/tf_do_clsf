@@ -278,13 +278,13 @@ def itr_180111_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
             data['testDataDir'] = '../Data/kitti/test_tfrecords_clsf_5tpl'
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
-            data['trainDataDir'] = '../Data/kitti/train_tfrecords_iterative_5tpl/' # from previous iteration
-            data['testDataDir'] = '../Data/kitti/test_tfrecords_iterative_5tpl/' # from previous iteration
+            data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
+            data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         ####
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
-        data['warpedTrainDataDir'] = warpedTrainDirBase + runName
-        data['warpedTestDataDir'] = warpedTestDirBase+ runName
+        data['warpedTrainDataDir'] = '../Data/kitti/train_tfrecords_iterative_5tpl/' + runName
+        data['warpedTestDataDir'] = '../Data/kitti/test_tfrecords_iterative_5tpl/'+ runName
         _set_folders(data['warpedTrainDataDir'])
         _set_folders(data['warpedTestDataDir'])
         data['tMatTrainDir'] = data['trainLogDir']+'/target'
