@@ -21,11 +21,13 @@ def _set_folders(folderPath):
 baseTrainDataDir = '../Data/kitti/train_tfrecords_clsf'
 baseTestDataDir = '../Data/kitti/test_tfrecords_clsf'
 
+warpedTrainDirBase = '../Data/kitti/train_tfrecords_iterative/'
+warpedTestDirBase = '../Data/kitti/test_tfrecords_iterative/'
+
 # Twin Common Parameters
 trainLogDirBase = '../Data/kitti/logs/tfdh_twin_py_logs/train_logs/'
 testLogDirBase = '../Data/kitti/logs/tfdh_twin_py_logs/test_logs/'
-warpedTrainDirBase = '../Data/kitti/train_tfrecords_iterative/'
-warpedTestDirBase = '../Data/kitti/test_tfrecords_iterative/'
+
 
 data = {
     # Data Parameters
@@ -272,15 +274,15 @@ def itr_180111_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
         runName = runPrefix+str(itrNum)
         ### Auto Iteration Number
         if itrNum == 1:
-            data['trainDataDir'] = baseTrainDataDir
-            data['testDataDir'] = baseTestDataDir
+            data['trainDataDir'] = '../Data/kitti/train_tfrecords_clsf_5tpl'
+            data['testDataDir'] = '../Data/kitti/test_tfrecords_clsf_5tpl'
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
             data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
             data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
         ####
-        data['trainLogDir'] = trainLogDirBase + runName
-        data['testLogDir'] = testLogDirBase + runName
+        data['trainLogDir'] = '../Data/kitti/train_tfrecords_iterative_5tpl/' + runName
+        data['testLogDir'] = '../Data/kitti/test_tfrecords_iterative_5tpl/' + runName
         data['warpedTrainDataDir'] = warpedTrainDirBase + runName
         data['warpedTestDataDir'] = warpedTestDirBase+ runName
         _set_folders(data['warpedTrainDataDir'])
