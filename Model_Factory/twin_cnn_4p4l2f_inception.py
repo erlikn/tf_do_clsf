@@ -141,18 +141,19 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
                                                              wd, **kwargs)
 
     ###### Normalize vectors to have output [0~1] for each batch
-    # fireout is [16] x [192]
+    # fireout is [16] x [192] 
     # fireout should be [16] x [6] x [32] x [1] => now normalize for each batch and each row
     # To do so, we could rearrange everything in [16 x 6] x [32] and calculate softmax for each row and return back to original
     # kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize') = kwargs.get('classificationModel')['binSize']
-    fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize')*kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize'))])
-    fireOut.set_shape([kwargs.get('activeBatchSize')*kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize'))])
+    #fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize')*kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get#('logicalOutputSize'))])
+    #fireOut.set_shape([kwargs.get('activeBatchSize')*kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize'))])
     #fireOut = tf.nn.softmax(fireOut)
 
     #### NOW CONVERT IT TO Correct format
     # kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize') = kwargs.get('classificationModel')['binSize']
-    fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize')), kwargs.get('numTuple')-1])
-    fireOut.set_shape([kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize')), kwargs.get('numTuple')-1])
+    
+    fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize')*(kwargs.get('numTuple')-1))), kwargs.get('numTuple')-1])
+    fireOut.set_shape([kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize')*(kwargs.get('numTuple')-1))), kwargs.get('numTuple')-1])
     
     return fireOut
 

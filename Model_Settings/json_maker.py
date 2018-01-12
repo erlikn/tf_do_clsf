@@ -216,10 +216,10 @@ def itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
         data['testBatchSize'] = 2#8#16
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
-        data['logicalOutputSize'] = 6
-        data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
-        data['lossFunction'] = "_params_classification_softmaxCrossentropy_loss_nTuple"
         data['numTuple'] = 2
+        data['logicalOutputSize'] = 6
+        data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']*(data['numTuple']-1)
+        data['lossFunction'] = "_params_classification_softmaxCrossentropy_loss_nTuple"
         
         ## runs
         data['trainMaxSteps'] = 90000
@@ -254,18 +254,18 @@ def itr_180111_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
     if reCompileITR:
         runPrefix = runName+'_'
         data['modelName'] = 'twin_cnn_4p4l2f_inception'
-        data['numParallelModules'] = 2
-        data['imageDepthChannels'] = 2
+        data['numParallelModules'] = 5
+        data['imageDepthChannels'] = 5
         data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
         data['modelShape'] = [32, 64, 32, 64, 64, 128, 64, 128, 1024]
         data['trainBatchSize'] = 2#8#16
         data['testBatchSize'] = 2#8#16
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
-        data['logicalOutputSize'] = 6
-        data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
-        data['lossFunction'] = "_params_classification_softmaxCrossentropy_loss_nTuple"
         data['numTuple'] = 5
+        data['logicalOutputSize'] = 6
+        data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']*(data['numTuple']-1)
+        data['lossFunction'] = "_params_classification_softmaxCrossentropy_loss_nTuple"
         
         ## runs
         data['trainMaxSteps'] = 90000

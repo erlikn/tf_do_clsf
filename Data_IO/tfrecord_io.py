@@ -256,7 +256,7 @@ def parse_example_proto_ntuple(exampleSerialized, **kwargs):
 
         targetABGXYZ = ntupleX6
     """
-    numTuples = kwargs.get('numParallelModules')
+    numTuples = kwargs.get('numTuple')
     featureMap = {
         'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
         'images': tf.FixedLenFeature([], dtype=tf.string),
@@ -336,7 +336,7 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
             pclCols = 62074
             targetABGXYZ = ntupleX6
     """
-    numTuples = kwargs.get('numParallelModules')
+    numTuples = kwargs.get('numTuple')
     featureMap = {
         'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
         'images': tf.FixedLenFeature([], dtype=tf.string),
