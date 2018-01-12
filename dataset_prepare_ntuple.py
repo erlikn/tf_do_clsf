@@ -20,7 +20,11 @@ from scipy import spatial
 from joblib import Parallel, delayed
 import multiprocessing
 
-import Data_IO.tfrecord_io
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
+
+import Data_IO.tfrecord_io as tfrecord_io 
 import Data_IO.kitti_shared as kitti
 
 
