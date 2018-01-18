@@ -17,7 +17,7 @@ import struct
 from scipy import spatial
 
 
-import Data_IO.kitti_shared_ext_clsf_range as clsf_range
+import Data_IO.kitti_shared_ext_clsf_range as ext_clsf_range
 ############################################################################
 # xyz[0]/rXYZ out of [-1,1]  this is reveresd
 MIN_X_R = -1
@@ -344,5 +344,38 @@ def get_bin_min_max():
     BIN_max = [ 0.019,  0.084,  0.023,  0.30,  0.20, 0.018]
     return BIN_max, BIN_min
 
-def get_updated_ranges(currentRanges, targetProbs, binSize):
-    return clsf_range.get_new_ranges(currentRanges, targetProbs, binSize)
+def get_updated_ranges(logits, ranges):
+    '''
+    Get updated ranges for each tuple and each parameter based on calculated scores (logits) and ranges.
+    Args:
+        binPreds: predicted logits selecting bins [6, 32, nT]
+        ranges: ranges for current model to exhibit bins [6, 33, nt]
+    Output:
+        params: [6, nT]
+    '''
+    binSize = logits.shape[1]
+    # Get the updates for each tuple and each parameter
+    for nt in range(logits.shape[2]):
+        for pid in range(logits.shape[0]):
+            # Update ranges
+            ranges[pid,:,nt] = ext_clsf_range.get_new_ranges(ranges[pid,:,nt], logits[pid, :, nt], binSize)
+    return ranges
+
+def get_params_from_binarylogits(binPreds, ranges):
+    '''
+    Extract parameters from binary predicted logits and ranges.
+    Args:
+        binPreds: binary predicted logits selecting bins [6, 32, nT]
+        ranges: ranges for current model to exhibit bins [6, 33, nt]
+    Output:
+        params: [6, nT]
+    '''
+    # find argmax for the bTargeP and use it to get the corresponding params
+    # argmax over 2nd dim (bins)
+    argmax = np.argmax(binPreds, axis=1) 
+    params = np.ndarray([binPreds.shape[0], 1, binPreds.shape[2]])
+    for parID in range(binPreds.shape[0]):
+        for tupID in range(binPreds.shape[2]):
+            # rngs 0-33, argmax 0-32 => always choses lower one, is this matching with kitti shared extended?????
+            params[parID, 0, tupID] = ranges[parID, argmax[parID, tupID], tupID]
+    return params

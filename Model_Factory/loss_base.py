@@ -176,4 +176,8 @@ def loss(pred, tval, **kwargs):
     if lossFunction == '_params_classification_l2_loss_nTuple':
         return _params_classification_l2_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
     if lossFunction == '_params_classification_softmaxCrossentropy_loss_nTuple':
-        return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+        if kwargs.get('lastTuple'):
+            return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, 1, kwargs.get('activeBatchSize'))
+        else:
+            return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+            

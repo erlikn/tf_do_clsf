@@ -40,7 +40,9 @@ import Data_IO.data_output_ntuple as data_output
 
 PHASE = 'train'
 
-
+####################################################
+####################################################
+####################################################
 ####################################################
 ####################################################
 FLAGS = tf.app.flags.FLAGS
@@ -109,9 +111,15 @@ def train(modelParams):
         ########## model_cnn.loss is called in the loss function
         #loss = weighted_loss(targetP, targetT, **modelParams)
         # CLASSIFICATION
-        loss = model_cnn.loss(targetP, bitTarget[:,:,:,0:modelParams['imageDepthChannels']-1], **modelParams)
-        # pcl based loss
-        #loss = pcl_params_loss(pclA, targetP, targetT, **modelParams)
+        if modelParams.get('lastTuple'):
+            # for training on last tuple        
+            loss = model_cnn.loss(targetP, bitTarget[:,:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+        else:
+            # for training on all tuples
+            loss = model_cnn.loss(targetP, bitTarget, **modelParams)
+        print('--------targetP', targetP.get_shape())
+        print('--------rngs', rngs.get_shape())
+        return
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
@@ -187,7 +195,7 @@ def train(modelParams):
             if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
                 checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
                 saver.save(sess, checkpointPath, global_step=step)
-
+            
             # Print Progress Info
             if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == modelParams['maxSteps']):
                 print('Progress: %.2f%%, Elapsed: %.2f mins, Training Completion in: %.2f mins --- %s' %
@@ -255,12 +263,12 @@ def main(argv=None):  # pylint: disable=unused-argumDt
 
     print('Train Main is built and Dataset is complied with n = 2 tuples!!!')
     print('')
-    if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
-        print("Please consider changing logs directory in order to avoid overwrite!")
-        return
-    if tf.gfile.Exists(modelParams['trainLogDir']):
-        tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
-    tf.gfile.MakeDirs(modelParams['trainLogDir'])
+    #if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
+    #    print("Please consider changing logs directory in order to avoid overwrite!")
+    #    return
+    #if tf.gfile.Exists(modelParams['trainLogDir']):
+    #    tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
+    #tf.gfile.MakeDirs(modelParams['trainLogDir'])
     train(modelParams)
 
 

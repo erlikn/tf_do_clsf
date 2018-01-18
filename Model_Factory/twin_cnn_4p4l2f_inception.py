@@ -152,8 +152,24 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     #### NOW CONVERT IT TO Correct format
     # kwargs.get('networkOutputSize')/kwargs.get('logicalOutputSize') = kwargs.get('classificationModel')['binSize']
     
-    fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize')*(kwargs.get('numTuple')-1))), kwargs.get('numTuple')-1])
-    fireOut.set_shape([kwargs.get('activeBatchSize'), kwargs.get('logicalOutputSize'), np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize')*(kwargs.get('numTuple')-1))), kwargs.get('numTuple')-1])
+    if kwargs.get('lastTuple'):
+        fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize'), 
+                                       kwargs.get('logicalOutputSize'), 
+                                       np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize'))), 
+                                       1])
+        fireOut.set_shape([kwargs.get('activeBatchSize'), 
+                           kwargs.get('logicalOutputSize'), 
+                           np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize'))), 
+                           1])
+    else:
+        fireOut = tf.reshape(fireOut, [kwargs.get('activeBatchSize'), 
+                                       kwargs.get('logicalOutputSize'), 
+                                       np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize')*(kwargs.get('numTuple')-1))), 
+                                       (kwargs.get('numTuple')-1)])
+        fireOut.set_shape([kwargs.get('activeBatchSize'), 
+                           kwargs.get('logicalOutputSize'), 
+                           np.int32(kwargs.get('networkOutputSize')/(kwargs.get('logicalOutputSize')*(kwargs.get('numTuple')-1))), 
+                           kwargs.get('numTuple')-1])
     
     return fireOut
 

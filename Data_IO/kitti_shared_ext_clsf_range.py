@@ -34,8 +34,8 @@ def get_new_ranges(rngs, targetP, maxRange):
     '''
     Get new ranges based on scores using weighted softmax probabilities, so that new ranges have uniform probabilities
     Parameters:
-        rngs = current ranges to be updated
-        targetP = predicted logits of each range from network, to be converted to probabilities
+        rngs = current ranges to be updated [n, m+1]
+        targetP = predicted logits of each range from network, to be converted to probabilities [n, m]
         maxRange = maximum number of bins for each parameter
     '''
     # Convert network predicted logits to probabilities
