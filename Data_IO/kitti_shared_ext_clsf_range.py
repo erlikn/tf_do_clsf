@@ -1,5 +1,6 @@
+import numpy as np
 
-def get_cdf(rng, prob, maxRange):
+def get_cdf(rngs, prob, maxRange):
     # get continuous cumulative distribution function as ranges differ 
     cdf = 0
     for bin in range(0,maxRange):

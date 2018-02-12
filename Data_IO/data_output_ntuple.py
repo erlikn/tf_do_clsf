@@ -50,14 +50,21 @@ def output_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFile
     Everything evaluated
     Warp second image based on predicted HAB and write to the new address
     Args:
+        batchImages: img
+        batchPcl: 3 x n 
+        bTargetT: b * 6 * 32 * nT targets
+        bTargetP: b * 6 * 32 * nT predictions
+        bRngs: b * 33 * nT ranges
+        batchTFrecFileIDs: fileID 
+        **kwargs: model parameters
     Returns:
     Raises:
       ValueError: If no dataDir
     """
     num_cores = multiprocessing.cpu_count() - 2
-    Parallel(n_jobs=num_cores)(delayed(output_loop_clsf)(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs) for i in range(kwargs.get('activeBatchSize')))
-    #for i in range(kwargs.get('activeBatchSize')):
-    #    output_loop(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs)
+    #Parallel(n_jobs=num_cores)(delayed(output_loop_clsf)(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs) for i in range(kwargs.get('activeBatchSize')))
+    for i in range(kwargs.get('activeBatchSize')):
+        output_loop_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs)
     return
 
 def output_loop_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs):
@@ -86,7 +93,7 @@ def output_loop_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFre
     #   2 - Update the rngs based on the predicted values for each image and save them
 
     # find argmax for the bTargeP and use it to get the corresponding params
-    if modelParams.get('lastTuple'):
+    if kwargs.get('lastTuple'):
         # for training on last tuple
         predParam = kitti.get_params_from_binarylogits(bTargetP[i], bRngs[i,:,:,numTuples-2:numTuples-1])
         # get updated ranges
@@ -98,7 +105,11 @@ def output_loop_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFre
         newRanges = kitti.get_updated_ranges(bTargetP[i], bRngs[i])
     # Apply the prediction from extracted parameters 
     
-
+    print("oldRNG === ", bRngs[i,0])
+    print("newRNG === ", newRanges[i,0])
+    print('tartParams ========= ', bTargetT.shape)
+    print('predParams ========= ', predParam.shape)
+    print('new Ranges ========= ', newRanges.shape)
     # split for depth dimension
     pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetT[i,:,numTuples-2], bTargetP[i], **kwargs)
     outBatchPcl = batchPcl.copy()

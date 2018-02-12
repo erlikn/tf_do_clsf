@@ -104,21 +104,27 @@ def write_iterative(runName, itrNum):
 
     if runName == '170706_ITR_B':
         itr_170706_ITR_B_inception(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+    ####
     elif runName == '171003_ITR_B': # using 170706_ITR_B but with loss for all n-1 tuples
         dataLocal['classificationModel'] = {'Model' : True, 'binSize' : 32}
         itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+    ####
     elif runName == '180110_ITR_B': # using 171003_ITR_B but with softmax loss for all 2 tuples
         dataLocal['classificationModel'] = {'Model' : True, 'binSize' : 32}
         itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+    ####
     elif runName == '180111_ITR_B': # using 171003_ITR_B but with softmax loss for all 5 tuples
         dataLocal['classificationModel'] = {'Model' : True, 'binSize' : 32}
         itr_180111_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+    ####
     elif runName == '180111_ITR_B_4clsf': # using 171003_ITR_B but with softmax loss for all 5 tuples
         dataLocal['classificationModel'] = {'Model' : True, 'binSize' : 32}
         itr_180111_ITR_B_clsf_long(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
-    elif runName == '180111_ITR_B_4clsf_lastTup': # using 171003_ITR_B but with softmax loss for all 5 tuples
+    ####
+    elif runName == '180111_ITR_B_4clsf_lastTup': # using 171003_ITR_B but with softmax loss for all last tuple
         dataLocal['classificationModel'] = {'Model' : True, 'binSize' : 32}
         itr_180111_ITR_B_clsf_long(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+    ####
     else:
         print("--error: Model name not found!")
         return False
