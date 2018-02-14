@@ -43,20 +43,20 @@ def _apply_prediction(pclB, targetT, targetP, **kwargs):
     targetResP2T = targetT - targetP
     return pclBTransformed, targetResP2T, depthImageB
 
-def output_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, **kwargs):
+def output_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, **kwargs):
     """
     TODO: SIMILAR TO DATA INPUT -> WE NEED A QUEUE RUNNER TO WRITE THIS OFF TO BE FASTER
 
     Everything evaluated
     Warp second image based on predicted HAB and write to the new address
     Args:
-        batchImages: img
-        batchPcl: 3 x n 
-        bTargetT: b * 6 * 32 * nT targets
-        bTargetP: b * 6 * 32 * nT predictions
-        bRngs: b * 33 * nT ranges
-        batchTFrecFileIDs: fileID 
-        **kwargs: model parameters
+        batchImages:        img
+        batchPcl:           3 x n 
+        bTargetT:           b * 6 * 32 * nT targets
+        bTargetP:           b * 6 * 32 * nT predictions
+        bRngs:              b * 33 * nT ranges
+        batchTFrecFileIDs:  fileID 
+        **kwargs:           model parameters
     Returns:
     Raises:
       ValueError: If no dataDir
@@ -64,24 +64,24 @@ def output_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFile
     num_cores = multiprocessing.cpu_count() - 2
     #Parallel(n_jobs=num_cores)(delayed(output_loop_clsf)(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs) for i in range(kwargs.get('activeBatchSize')))
     for i in range(kwargs.get('activeBatchSize')):
-        output_loop_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs)
+        output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs)
     return
 
-def output_loop_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs):
+def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs):
     """
     TODO: SIMILAR TO DATA INPUT -> WE NEED A QUEUE RUNNER TO WRITE THIS OFF TO BE FASTER
 
     Everything evaluated
     Warp second image based on predicted HAB and write to the new address
     Args:
-        batchImages:        batch of depth images
-        batchPcl:           batch of PCL files
-        bTargetT:           batch of target logits (binary)
-        bTargetP:           batch of predicted logits (binary)
-        bRngs:              barch of ranges
-        batchTFrecFileIDs:  batch of tf_record_IDs
+        batchImages:        img
+        batchPcl:           3 x n 
+        bTargetT:           b * 6 * 32 * nT targets
+        bTargetP:           b * 6 * 32 * nT predictions
+        bRngs:              b * 33 * nT ranges
+        batchTFrecFileIDs:  fileID 
         i:                  ID of the batch
-        kwargs:             Model parameters
+        **kwargs:           model parameters
     Returns:
         N/A
     Raises:
@@ -105,11 +105,22 @@ def output_loop_clsf(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFre
         newRanges = kitti.get_updated_ranges(bTargetP[i], bRngs[i])
     # Apply the prediction from extracted parameters 
     
-    print("oldRNG === ", bRngs[i,0])
-    print("newRNG === ", newRanges[i,0])
+    #print(bTargetP[i,0,:,0])
+    import matplotlib.pyplot as plt
+    plt.plot(bTargetT[i,0,:,3])
+    normP = bTargetP[i,0,:,0]/np.linalg.norm(bTargetP[i,0,:,0])
+    plt.plot(normP)
+    plt.show()
+    #print("oldRNG === ", bRngs[i,0,:,3])
+    #print("newRNG === ", newRanges[0,:,0])
+    print("difRNG === ", newRanges[0,:,0]-bRngs[i,0,:,3])
     print('tartParams ========= ', bTargetT.shape)
+    print('tarPParams ========= ', bTargetP.shape)
     print('predParams ========= ', predParam.shape)
+    print('old Ranges ========= ', bRngs.shape)
     print('new Ranges ========= ', newRanges.shape)
+    
+    ################## TO BE FIXED APPLYING THE PREDICTION BASED ON PREDPARAM
     # split for depth dimension
     pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetT[i,:,numTuples-2], bTargetP[i], **kwargs)
     outBatchPcl = batchPcl.copy()

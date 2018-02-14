@@ -31,7 +31,7 @@ def get_softmax(rngs, scoresP, maxRange):
     sumProb = get_cdf(rngs, prob, maxRange) # calculates sum again that will always should be 1
     return prob, sumProb
 
-def get_new_ranges(rngs, targetP, maxRange):
+def get_new_ranges(rngsIn, targetP, maxRange):
     '''
     Get new ranges based on scores using weighted softmax probabilities, so that new ranges have uniform probabilities
     Parameters:
@@ -39,6 +39,7 @@ def get_new_ranges(rngs, targetP, maxRange):
         targetP = predicted logits of each range from network, to be converted to probabilities [n, m]
         maxRange = maximum number of bins for each parameter
     '''
+    rngs = rngsIn.copy()
     # Convert network predicted logits to probabilities
     prob, sumWeightedProb = get_softmax(rngs, targetP, maxRange)
     probEach = sumWeightedProb/maxRange
@@ -51,11 +52,13 @@ def get_new_ranges(rngs, targetP, maxRange):
     while jNew<maxRange:
         probLocal = (rngsOld[iOld+1]-rngsOld[iOld])*prob[iOld]
         #print("cLoc", probLocal)
-        if probRange+probLocal < probEach:
+        if probRange+probLocal < probEach: # if sumProb to this point smaller than probEach then add up and continue
             probRange+=probLocal
             iOld+=1
-        else:
-            probRem = probEach-probRange
+        else: # if sumProb > probEach then this is the iOld -> find cut, and keep rest for next jNew
+            probRem = probEach-probRange # means -->  probRem < probLocal
+            # ratio of distance we need from this prob region
+            #      (ratio*range) this part is implicit, check probLocal definition + left range            
             hRng = (probRem/prob[iOld])+rngsOld[iOld]
             #print("hRng", hRng)
             #print("curRange=",probRange+(hRng*prob[iOld]))

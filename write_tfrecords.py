@@ -179,7 +179,7 @@ def train(modelParams):
                     else:
                         filesDictionaryAccum[fileIDname]=1
                 #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-                data_output.output_clsf(evImages, evPcl, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, **modelParams)
+                data_output.output_clsf(evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, **modelParams)
                 duration = time.time() - startTime
                 durationSum += duration
                 durationSumAll += duration

@@ -353,13 +353,14 @@ def get_updated_ranges(logits, ranges):
     Output:
         params: [6, nT]
     '''
+    localRanges = ranges.copy()
     binSize = logits.shape[1]
     # Get the updates for each tuple and each parameter
     for nt in range(logits.shape[2]):
         for pid in range(logits.shape[0]):
             # Update ranges
-            ranges[pid,:,nt] = ext_clsf_range.get_new_ranges(ranges[pid,:,nt], logits[pid, :, nt], binSize)
-    return ranges
+            localRanges[pid,:,nt] = ext_clsf_range.get_new_ranges(ranges[pid,:,nt], logits[pid, :, nt], binSize)
+    return localRanges
 
 def get_params_from_binarylogits(binPreds, ranges):
     '''
