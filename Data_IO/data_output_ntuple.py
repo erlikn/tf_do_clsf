@@ -52,6 +52,7 @@ def output_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, b
     Args:
         batchImages:        img
         batchPcl:           3 x n 
+        bTargetVals:        b * 6 * nt
         bTargetT:           b * 6 * 32 * nT targets
         bTargetP:           b * 6 * 32 * nT predictions
         bRngs:              b * 33 * nT ranges
@@ -76,6 +77,7 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
     Args:
         batchImages:        img
         batchPcl:           3 x n 
+        bTargetVals:        b * 6 * nt
         bTargetT:           b * 6 * 32 * nT targets
         bTargetP:           b * 6 * 32 * nT predictions
         bRngs:              b * 33 * nT ranges
@@ -119,13 +121,15 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
     print('predParams ========= ', predParam.shape)
     print('old Ranges ========= ', bRngs.shape)
     print('new Ranges ========= ', newRanges.shape)
-    
+    plt.plot(bRngs[i,0,:,3])
+    plt.plot(newRanges[0,:,0])
+    plt.show()
     ################## TO BE FIXED APPLYING THE PREDICTION BASED ON PREDPARAM
     # split for depth dimension
-    pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetT[i,:,numTuples-2], bTargetP[i], **kwargs)
+    pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetVals[i,:,numTuples-2], predParam, **kwargs)
     outBatchPcl = batchPcl.copy()
     outBatchImages = batchImages.copy()
-    outTargetT = bTargetT.copy()
+    bTargetVals = bTargetT.copy()
     outBatchPcl[i,:,:,numTuples-1] = pclBTransformed
     outBatchImages[i,:,:,numTuples-1] = depthBTransformed
     outTargetT[i,:,numTuples-2] = targetRes
