@@ -8,22 +8,31 @@ def get_cdf(rngs, prob, maxRange):
     return cdf
 
 def get_exp_sum(rngs, scores, maxRange):
-    # calculates sum of exp(socre_i) 
+    # calculates sum of exp(score_i) 
     csf = 0
     for bin in range(0,maxRange):
         csf += np.exp(scores[bin])
+    return csf
+
+def get_sqr_sum(rngs, scores, maxRange):
+    # calculates sum of square(score_i) 
+    csf = 0
+    for bin in range(0,maxRange):
+        csf += np.math.pow(scores[bin],2)
     return csf
 
 def get_range_weighted_scores(rngs, scores, maxRange):
     # get range wiehgted scores (1/rngs_i)*score_i
     for bin in range(0,maxRange):
         scores[bin] = (1/(rngs[bin+1]-rngs[bin]))*scores[bin]
+    # normalize between 0 and 1
+    scores = (scores-np.min(scores)) / (np.max(scores)-np.min(scores))
     return scores
 
-def get_softmax(rngs, scoresP, maxRange):
+def get_softmax_ranging(rngs, scoresP, maxRange):
     # get softmax normalization  ===== vasucakkt exponential weighting
     scoresPWeighted = get_range_weighted_scores(rngs, scoresP, maxRange)
-    scoresPWeighted = scoresPWeighted - np.max(scoresPWeighted)
+    #scoresPWeighted = scoresPWeighted - np.max(scoresPWeighted)
     sumExp = get_exp_sum(rngs, scoresPWeighted, maxRange) # finds sum of scores w.r.t ranges
     prob = scoresPWeighted.copy()
     for bin in range(0,maxRange): # converts scores to Softmax normalized vector
@@ -31,17 +40,38 @@ def get_softmax(rngs, scoresP, maxRange):
     sumProb = get_cdf(rngs, prob, maxRange) # calculates sum again that will always should be 1
     return prob, sumProb
 
-def get_new_ranges(rngsIn, targetP, maxRange):
+def get_sqr_ranging(rngs, scoresP, maxRange):
+    # get squared normalization  ===== squared norm weighting
+    scoresPWeighted = get_range_weighted_scores(rngs, scoresP, maxRange)
+    #scoresPWeighted = scoresPWeighted - np.max(scoresPWeighted)
+    sumSqr = get_sqr_sum(rngs, scoresPWeighted, maxRange) # finds sum of scores w.r.t ranges
+    prob = scoresPWeighted.copy()
+    for bin in range(0,maxRange): # converts scores to square normalized vector
+        prob[bin] = np.math.pow(scoresPWeighted[bin],2) / sumSqr
+    sumProb = get_cdf(rngs, prob, maxRange) # calculates sum again that will always should be 1
+    return prob, sumProb
+
+def get_new_ranges(rngsIn, targetP, maxRange, weighting):
     '''
     Get new ranges based on scores using weighted softmax probabilities, so that new ranges have uniform probabilities
     Parameters:
         rngs = current ranges to be updated [n, m+1]
         targetP = predicted logits of each range from network, to be converted to probabilities [n, m]
         maxRange = maximum number of bins for each parameter
+        weighting = 'softmax' | 'squared' 
+                        # Softmax has a very heavy weighting around the guess region
+                        # Squared has lighter weighting than Softmax around the guess region
+
     '''
     rngs = rngsIn.copy()
     # Convert network predicted logits to probabilities
-    prob, sumWeightedProb = get_softmax(rngs, targetP, maxRange)
+    if weighting == 'softmax':
+        # Softmax has a very heavy weighting around the guess region
+        prob, sumWeightedProb = get_softmax_ranging(rngs, targetP, maxRange)
+    if weighting == 'squared':
+        # Squared has lighter weighting than Softmax around the guess region
+        prob, sumWeightedProb = get_sqr_ranging(rngs, targetP, maxRange)
+    
     probEach = sumWeightedProb/maxRange
     #print("each =", probEach)
     rngsOld = rngs.copy()

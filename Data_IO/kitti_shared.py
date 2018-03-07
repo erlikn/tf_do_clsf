@@ -318,6 +318,8 @@ def remove_trailing_zeros(xyz):
 # BIN_multi_bit_target
 def get_multi_bit_target(pose, BIN_rng, BIN_SIZE):
     '''
+    Get pose params and export bit_targets
+    
     pose: target n=6 dof pose
     BIN_rng: n=6 * BIN_SIZE=32 matrix showing 32 bins for each dimension of pose
     BIN_SIZE: 32, number of the bins for each dimension of pose
@@ -344,7 +346,7 @@ def get_bin_min_max():
     BIN_max = [ 0.019,  0.084,  0.023,  0.30,  0.20, 0.018]
     return BIN_max, BIN_min
 
-def get_updated_ranges(logits, ranges):
+def get_updated_ranges(logits, ranges, weighting):
     '''
     Get updated ranges for each tuple and each parameter based on calculated scores (logits) and ranges.
     Args:
@@ -358,8 +360,10 @@ def get_updated_ranges(logits, ranges):
     # Get the updates for each tuple and each parameter
     for nt in range(logits.shape[2]):
         for pid in range(logits.shape[0]):
+            # Make sure all logits are > 0
+            logitsPositive = logits[pid, :, nt]-np.min(logits[pid, :, nt])+0.0001
             # Update ranges
-            localRanges[pid,:,nt] = ext_clsf_range.get_new_ranges(ranges[pid,:,nt], logits[pid, :, nt], binSize)
+            localRanges[pid,:,nt] = ext_clsf_range.get_new_ranges(ranges[pid,:,nt], logits[pid, :, nt], binSize, weighting)
     return localRanges
 
 def get_params_from_binarylogits(binPreds, ranges):

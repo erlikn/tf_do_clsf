@@ -93,26 +93,24 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
     # Two tasks:
     #   1 - Use the predicted bTargetP[b, 6, 32, nt] and brngs[b, 6, 33, nt] to get the parameters
     #   2 - Update the rngs based on the predicted values for each image and save them
-
     # find argmax for the bTargeP and use it to get the corresponding params
     if kwargs.get('lastTuple'):
         # for training on last tuple
         predParam = kitti.get_params_from_binarylogits(bTargetP[i], bRngs[i,:,:,numTuples-2:numTuples-1])
         # get updated ranges
-        newRanges = kitti.get_updated_ranges(bTargetP[i], bRngs[i,:,:,numTuples-2:numTuples-1])
+        newRanges = kitti.get_updated_ranges(bTargetP[i], bRngs[i,:,:,numTuples-2:numTuples-1], 'squared') # softmax | squared
+        # get updated bit target
+        newBitTarget = kitti.get_multi_bit_target(bTargetVals[i,:,numTuples-2:numTuples-1], newRanges, bTargetP.shape[2])
     else:
         # for training on all tuples
         predParam = kitti.get_params_from_binarylogits(bTargetP[i], bRngs[i])
         # get updated ranges
-        newRanges = kitti.get_updated_ranges(bTargetP[i], bRngs[i])
+        newRanges = kitti.get_updated_ranges(bTargetP[i], bRngs[i], 'squared') # softmax | squared
+        # get updated bit target
+        newBitTarget = kitti.get_multi_bit_target(bTargetVals[i], newRanges, bTargetP.shape[2]) # make sure this function is compatible with nT > 2
+
     # Apply the prediction from extracted parameters 
     
-    #print(bTargetP[i,0,:,0])
-    import matplotlib.pyplot as plt
-    plt.plot(bTargetT[i,0,:,3])
-    normP = bTargetP[i,0,:,0]/np.linalg.norm(bTargetP[i,0,:,0])
-    plt.plot(normP)
-    plt.show()
     #print("oldRNG === ", bRngs[i,0,:,3])
     #print("newRNG === ", newRanges[0,:,0])
     print("difRNG === ", newRanges[0,:,0]-bRngs[i,0,:,3])
@@ -121,8 +119,29 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
     print('predParams ========= ', predParam.shape)
     print('old Ranges ========= ', bRngs.shape)
     print('new Ranges ========= ', newRanges.shape)
+    print('target val ========= ', bTargetVals[i,0,numTuples-2])
+    print('target rng =-1=0=+1= ', newRanges[0,np.argmax(newBitTarget)-1], newRanges[0,np.argmax(newBitTarget)], newRanges[0,np.argmax(newBitTarget)+1])
+
+    #print(bTargetP[i,0,:,0])
+    import matplotlib.pyplot as plt
+    plt.subplot(311)
+    plt.plot(bTargetT[i,0,:,3])
+    normP = bTargetP[i,0,:,0]/np.linalg.norm(bTargetP[i,0,:,0])
+    plt.plot(normP)
+    plt.title('Target Prediction')
+    #plt.show()
+    
+    plt.subplot(312)
     plt.plot(bRngs[i,0,:,3])
+    #plt.plot(newRanges[0,2:31,0]-newRanges[0,1:30,0])
     plt.plot(newRanges[0,:,0])
+    plt.title('Ranges')
+    #plt.show()
+
+    plt.subplot(313)
+    plt.plot(newBitTarget[0])
+    #plt.plot(newRanges[0,1:31,0]-newRanges[0,0:30,0])
+    plt.title('Ranges diff')
     plt.show()
     ################## TO BE FIXED APPLYING THE PREDICTION BASED ON PREDPARAM
     # split for depth dimension
