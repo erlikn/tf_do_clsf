@@ -120,7 +120,15 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
     print('old Ranges ========= ', bRngs.shape)
     print('new Ranges ========= ', newRanges.shape)
     print('target val ========= ', bTargetVals[i,0,numTuples-2])
+    print('target val =5=28= ', newRanges[0,5], newRanges[0,28])
     print('target rng =-1=0=+1= ', newRanges[0,np.argmax(newBitTarget)-1], newRanges[0,np.argmax(newBitTarget)], newRanges[0,np.argmax(newBitTarget)+1])
+    #print('pred   val ========= ', predParam[1])
+
+    #### Shift the ranges so morphed image will have correct target
+    #print('new Ranges ========= ', newRanges[1])
+    for i in range(newRanges.shape[0]):
+        newRanges[i] -= predParam[i]
+    #print('new-pred   ========= ', newRanges[1])
 
     #print(bTargetP[i,0,:,0])
     import matplotlib.pyplot as plt
@@ -143,15 +151,27 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
     #plt.plot(newRanges[0,1:31,0]-newRanges[0,0:30,0])
     plt.title('Ranges diff')
     plt.show()
+
+    if kwargs.get('lastTuple'):
+        pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetVals[i,:,numTuples-2], predParam, **kwargs)
+        outBatchPcl = batchPcl.copy()
+        outBatchImages = batchImages.copy()
+        bTargetVals = bTargetT.copy()
+        outBatchPcl[i,:,:,numTuples-1] = pclBTransformed
+        outBatchImages[i,:,:,numTuples-1] = depthBTransformed
+        outTargetT[i,:,numTuples-2] = targetRes
+    #else:
+        # Do WE UPDATE ALL???
+
     ################## TO BE FIXED APPLYING THE PREDICTION BASED ON PREDPARAM
     # split for depth dimension
-    pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetVals[i,:,numTuples-2], predParam, **kwargs)
-    outBatchPcl = batchPcl.copy()
-    outBatchImages = batchImages.copy()
-    bTargetVals = bTargetT.copy()
-    outBatchPcl[i,:,:,numTuples-1] = pclBTransformed
-    outBatchImages[i,:,:,numTuples-1] = depthBTransformed
-    outTargetT[i,:,numTuples-2] = targetRes
+    #pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetVals[i,:,numTuples-2], predParam, **kwargs)
+    #outBatchPcl = batchPcl.copy()
+    #outBatchImages = batchImages.copy()
+    #bTargetVals = bTargetT.copy()
+    #outBatchPcl[i,:,:,numTuples-1] = pclBTransformed
+    #outBatchImages[i,:,:,numTuples-1] = depthBTransformed
+    #outTargetT[i,:,numTuples-2] = targetRes
     # Write each Tensorflow record
     filename = str(batchTFrecFileIDs[i][0]+100) + "_" + str(batchTFrecFileIDs[i][1]+100000) + "_" + str(batchTFrecFileIDs[i][2]+100000)
     tfrecord_io.tfrecord_writer_ntuple(batchTFrecFileIDs[i],
@@ -162,6 +182,7 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
                                        numTuples,
                                        filename)
 
+    # Write the predicted transformation to a folder 
     if kwargs.get('phase') == 'train':
         folderTmat = kwargs.get('tMatTrainDir')
     else:

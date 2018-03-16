@@ -3,3 +3,4 @@
 *.save
 *.swp
 .vscode/
+*.code-workspace
