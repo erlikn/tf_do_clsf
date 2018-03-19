@@ -156,11 +156,12 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
         pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetVals[i,:,numTuples-2], predParam, **kwargs)
         outBatchPcl = batchPcl.copy()
         outBatchImages = batchImages.copy()
-        bTargetVals = bTargetT.copy()
+        outTargetVals = bTargetVals.copy()
         outBatchPcl[i,:,:,numTuples-1] = pclBTransformed
         outBatchImages[i,:,:,numTuples-1] = depthBTransformed
-        outTargetT[i,:,numTuples-2] = targetRes
-    #else:
+        outTargetVals[i,:,numTuples-2] = targetRes
+    else:
+        print('do we update all???')
         # Do WE UPDATE ALL???
 
     ################## TO BE FIXED APPLYING THE PREDICTION BASED ON PREDPARAM
