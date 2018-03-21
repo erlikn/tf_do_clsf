@@ -36,7 +36,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 # import input & output modules 
 import Data_IO.data_input_ntuple as data_input
-import Data_IO.data_output_ntuple as data_output
+import Data_IO.data_output_ntuple_noMorph as data_output
 
 PHASE = 'train'
 
@@ -119,7 +119,7 @@ def train(modelParams):
             loss = model_cnn.loss(targetP, bitTarget, **modelParams)
         print('--------targetP', targetP.get_shape())
         print('--------rngs', rngs.get_shape())
-        return
+
 
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.

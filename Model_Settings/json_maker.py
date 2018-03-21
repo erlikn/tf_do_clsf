@@ -157,8 +157,8 @@ def itr_170706_ITR_B_inception(reCompileITR, trainLogDirBase, testLogDirBase, ru
             data['testDataDir'] = baseTestDataDir
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
-            data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
-            data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+            data['trainDataDir'] = warpedTrainDirBase + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = warpedTestDirBase + runPrefix+str(itrNum-1) # from previous iteration
         ####
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
@@ -199,8 +199,8 @@ def itr_171003_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
             data['testDataDir'] = baseTestDataDir
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
-            data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
-            data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+            data['trainDataDir'] = warpedTrainDirBase + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = warpedTestDirBase + runPrefix+str(itrNum-1) # from previous iteration
         ####
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
@@ -245,8 +245,8 @@ def itr_180110_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
             data['testDataDir'] = baseTestDataDir
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
-            data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
-            data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+            data['trainDataDir'] = warpedTrainDirBase + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = warpedTestDirBase + runPrefix+str(itrNum-1) # from previous iteration
         ####
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
@@ -291,8 +291,8 @@ def itr_180111_ITR_B_clsf(reCompileITR, trainLogDirBase, testLogDirBase, runName
             data['testDataDir'] = '../Data/kitti/test_tfrecords_clsf_5tpl'
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
-            data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
-            data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+            data['trainDataDir'] = '../Data/kitti/train_tfrecords_iterative_5tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = '../Data/kitti/test_tfrecords_iterative_5tpl/' + runPrefix+str(itrNum-1) # from previous iteration
         ####
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
@@ -343,8 +343,8 @@ def itr_180111_ITR_B_clsf_long(reCompileITR, trainLogDirBase, testLogDirBase, ru
             data['testDataDir'] = '../Data/kitti/test_tfrecords_clsf_5tpl'
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
-            data['trainDataDir'] = data['warpedTrainDataDir'] # from previous iteration
-            data['testDataDir'] = data['warpedTestDataDir'] # from previous iteration
+            data['trainDataDir'] = '../Data/kitti/train_tfrecords_iterative_5tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = '../Data/kitti/test_tfrecords_iterative_5tpl/' + runPrefix+str(itrNum-1) # from previous iteration
         ####
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName

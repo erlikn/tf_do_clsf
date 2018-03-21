@@ -22,27 +22,6 @@ import multiprocessing
 import Data_IO.tfrecord_io as tfrecord_io
 import Data_IO.kitti_shared as kitti
 
-def _apply_prediction(pclB, targetT, targetP, **kwargs):
-    '''
-    Transform pclB, Calculate new targetT based on targetP, Create new depth image
-    Return:
-        - New PCLB
-        - New targetT
-        - New depthImageB
-    '''
-    # remove trailing zeros
-    pclA = kitti.remove_trailing_zeros(pclB)
-    # get transformed pclB based on targetP
-    tMatP = kitti._get_tmat_from_params(targetP) 
-    pclBTransformed = kitti.transform_pcl(pclB, tMatP)
-    # get new depth image of transformed pclB
-    depthImageB, _ = kitti.get_depth_image_pano_pclView(pclBTransformed)
-    pclBTransformed = kitti._zero_pad(pclBTransformed, kwargs.get('pclCols')-pclBTransformed.shape[1])
-    # get residual Target
-    #tMatResB2A = kitti.get_residual_tMat_Bp2B2A(targetP, targetT) # first is A, second is B
-    targetResP2T = targetT - targetP
-    return pclBTransformed, targetResP2T, depthImageB
-
 def output_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, **kwargs):
     """
     TODO: SIMILAR TO DATA INPUT -> WE NEED A QUEUE RUNNER TO WRITE THIS OFF TO BE FASTER
@@ -63,9 +42,9 @@ def output_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, b
       ValueError: If no dataDir
     """
     num_cores = multiprocessing.cpu_count() - 2
-    #Parallel(n_jobs=num_cores)(delayed(output_loop_clsf)(batchImages, batchPcl, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs) for i in range(kwargs.get('activeBatchSize')))
-    for i in range(kwargs.get('activeBatchSize')):
-        output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs)
+    Parallel(n_jobs=num_cores)(delayed(output_loop_clsf)(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs) for i in range(kwargs.get('activeBatchSize')))
+    #for i in range(kwargs.get('activeBatchSize')):
+    #    output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs)
     return
 
 def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, i, **kwargs):
@@ -113,82 +92,80 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
     
     #print("oldRNG === ", bRngs[i,0,:,3])
     #print("newRNG === ", newRanges[0,:,0])
-    print("difRNG === ", newRanges[0,:,0]-bRngs[i,0,:,3])
-    print('tartParams ========= ', bTargetT.shape)
-    print('tarPParams ========= ', bTargetP.shape)
-    print('predParams ========= ', predParam.shape)
-    print('old Ranges ========= ', bRngs.shape)
-    print('new Ranges ========= ', newRanges.shape)
-    print('target val ========= ', bTargetVals[i,0,numTuples-2])
-    print('target val =5=28= ', newRanges[0,5], newRanges[0,28])
-    print('target rng =-1=0=+1= ', newRanges[0,np.argmax(newBitTarget)-1], newRanges[0,np.argmax(newBitTarget)], newRanges[0,np.argmax(newBitTarget)+1])
+    #print("difRNG === ", newRanges[0,:,0]-bRngs[i,0,:,3])
+    #print('tartParams ========= ', bTargetT.shape)
+    #print('tarPParams ========= ', bTargetP.shape)
+    #print('predParams ========= ', predParam.shape)
+    #print('old Ranges ========= ', bRngs.shape)
+    #print('new Ranges ========= ', newRanges.shape)
+    #print('target val ========= ', bTargetVals[i,0,numTuples-2])
+    #print('target val =5=28= ', newRanges[0,5], newRanges[0,28])
+    #print('target rng =-1=0=+1= ', newRanges[0,np.argmax(newBitTarget)-1], newRanges[0,np.argmax(newBitTarget)], newRanges[0,np.argmax(newBitTarget)+1])
     #print('pred   val ========= ', predParam[1])
 
-    #### Shift the ranges so morphed image will have correct target
-    #print('new Ranges ========= ', newRanges[1])
-    for i in range(newRanges.shape[0]):
-        newRanges[i] -= predParam[i]
-    #print('new-pred   ========= ', newRanges[1])
-
-    #print(bTargetP[i,0,:,0])
-    import matplotlib.pyplot as plt
-    plt.subplot(311)
-    plt.plot(bTargetT[i,0,:,3])
-    normP = bTargetP[i,0,:,0]/np.linalg.norm(bTargetP[i,0,:,0])
-    plt.plot(normP)
-    plt.title('Target Prediction')
+    ##print(bTargetP[i,0,:,0])
+    #import matplotlib.pyplot as plt
+    #plt.subplot(311)
+    #plt.plot(bTargetT[i,0,:,3])
+    #normP = bTargetP[i,0,:,0]/np.linalg.norm(bTargetP[i,0,:,0])
+    #plt.plot(normP)
+    #plt.title('Target Prediction')
+    ##plt.show()
+    #
+    #plt.subplot(312)
+    #plt.plot(bRngs[i,0,:,3])
+    ##plt.plot(newRanges[0,2:31,0]-newRanges[0,1:30,0])
+    #plt.plot(newRanges[0,:,0])
+    #plt.title('Ranges')
+    ##plt.show()
+    #
+    #plt.subplot(313)
+    #plt.plot(newBitTarget[0])
+    ##plt.plot(newRanges[0,1:31,0]-newRanges[0,0:30,0])
+    #plt.title('Ranges diff')
     #plt.show()
+    #print('TargetVals ====', bTargetVals.shape)
+    #print('BTarget    ====', bTargetT.shape)
+    #print('Ranges     ====', bRngs.shape)
+    #print('newBTarget    ====', newBitTarget.shape)
+    #print('newRanges     ====', newRanges.shape)
     
-    plt.subplot(312)
-    plt.plot(bRngs[i,0,:,3])
-    #plt.plot(newRanges[0,2:31,0]-newRanges[0,1:30,0])
-    plt.plot(newRanges[0,:,0])
-    plt.title('Ranges')
-    #plt.show()
-
-    plt.subplot(313)
-    plt.plot(newBitTarget[0])
-    #plt.plot(newRanges[0,1:31,0]-newRanges[0,0:30,0])
-    plt.title('Ranges diff')
-    plt.show()
-
+    # Update the target values and labels
     if kwargs.get('lastTuple'):
-        pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetVals[i,:,numTuples-2], predParam, **kwargs)
-        outBatchPcl = batchPcl.copy()
-        outBatchImages = batchImages.copy()
-        outTargetVals = bTargetVals.copy()
-        outBatchPcl[i,:,:,numTuples-1] = pclBTransformed
-        outBatchImages[i,:,:,numTuples-1] = depthBTransformed
-        outTargetVals[i,:,numTuples-2] = targetRes
+        outRanges = bRngs[i].copy()
+        outRanges[:,:, numTuples-2] = newRanges.reshape([newRanges.shape[0], newRanges.shape[1]])
+        outBitTarget = bTargetT[i].copy()
+        outBitTarget[:,:,numTuples-2] = newBitTarget
     else:
         print('do we update all???')
         # Do WE UPDATE ALL???
 
-    ################## TO BE FIXED APPLYING THE PREDICTION BASED ON PREDPARAM
-    # split for depth dimension
-    #pclBTransformed, targetRes, depthBTransformed = _apply_prediction(batchPcl[i,:,:,numTuples-1], bTargetVals[i,:,numTuples-2], predParam, **kwargs)
-    #outBatchPcl = batchPcl.copy()
-    #outBatchImages = batchImages.copy()
-    #bTargetVals = bTargetT.copy()
-    #outBatchPcl[i,:,:,numTuples-1] = pclBTransformed
-    #outBatchImages[i,:,:,numTuples-1] = depthBTransformed
-    #outTargetT[i,:,numTuples-2] = targetRes
+    #print('outBTarget    ====', outBitTarget.shape)
+    #print('outRanges     ====', outRanges.shape)
+
     # Write each Tensorflow record
     filename = str(batchTFrecFileIDs[i][0]+100) + "_" + str(batchTFrecFileIDs[i][1]+100000) + "_" + str(batchTFrecFileIDs[i][2]+100000)
-    tfrecord_io.tfrecord_writer_ntuple(batchTFrecFileIDs[i],
-                                       outBatchPcl[i],
-                                       outBatchImages[i],
-                                       outTargetT[i],
-                                       kwargs.get('warpedOutputFolder')+'/',
-                                       numTuples,
-                                       filename)
+    tfrecord_io.tfrecord_writer_ntuple_classification(
+        batchTFrecFileIDs[i],
+        batchPcl[i],
+        batchImages[i],
+        bTargetVals[i],
+        outBitTarget,
+        outRanges,
+        kwargs.get('warpedOutputFolder')+'/',
+        numTuples,
+        filename)
 
     # Write the predicted transformation to a folder 
     if kwargs.get('phase') == 'train':
         folderTmat = kwargs.get('tMatTrainDir')
     else:
         folderTmat = kwargs.get('tMatTestDir')
-    write_predictions(batchTFrecFileIDs[i], bTargetP[i], folderTmat)
+    
+    if kwargs.get('lastTuple'):
+        predParam = predParam.reshape(predParam.shape[0])
+    
+    write_predictions(batchTFrecFileIDs[i], predParam, folderTmat)
     return
 
 def write_json_file(filename, datafile):
