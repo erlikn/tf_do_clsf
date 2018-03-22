@@ -82,7 +82,7 @@ def _set_control_params(modelParams):
 ####################################################
 ####################################################
 ####################################################
-def train(modelParams):
+def train(modelParams, epochNumber):
     # import corresponding model name as model_cnn, specifed at json file
     model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName'])
     
@@ -152,8 +152,10 @@ def train(modelParams):
 
 
         # restore a saver.
-        #saver.restore(sess, (modelParams['trainLogDir'].replace('_B_2','_B_1'))+'/model.ckpt-'+str(modelParams['trainMaxSteps']-1))
-        #print('Ex-Model     loaded')
+        if epochNumber > 0:
+            print('Loading Ex-Model with epoch number %d ...', epochNumber)
+            saver.restore(sess, (modelParams['trainLogDir']+'/model.ckpt-'+str(epochNumber)))
+            print('Ex-Model     loaded')
 
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
@@ -164,7 +166,7 @@ def train(modelParams):
         print('Training     started')
         durationSum = 0
         durationSumAll = 0
-        for step in xrange(modelParams['maxSteps']):
+        for step in xrange(epochNumber, modelParams['maxSteps']):
             startTime = time.time()
             #_, lossValue = sess.run([opTrain, loss])
             _, lossValue, bitPreEV = sess.run([opTrain, loss, targetP])
@@ -229,11 +231,12 @@ def _setupLogging(logPath):
     logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
-    if (len(argv)<3):
-        print("Enter 'model name' and 'iteration number'")
+    if (len(argv)<4):
+        print("Enter 'model name' and 'iteration number' and 'epoch number to load / 0 for new'")
         return
     modelName = argv[1]
     itrNum = int(argv[2])
+    epochNumber = int(argv[3])
     if itrNum>4 or itrNum<0:
         print('iteration number should only be from 1 to 4 inclusive')
         return
@@ -263,13 +266,14 @@ def main(argv=None):  # pylint: disable=unused-argumDt
 
     print('Train Main is built and Dataset is complied with n = 2 tuples!!!')
     print('')
-    #if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
-    #    print("Please consider changing logs directory in order to avoid overwrite!")
-    #    return
-    #if tf.gfile.Exists(modelParams['trainLogDir']):
-    #    tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
-    #tf.gfile.MakeDirs(modelParams['trainLogDir'])
-    train(modelParams)
+    if epochNumber == 0:
+        if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
+            print("Please consider changing logs directory in order to avoid overwrite!")
+            return
+        if tf.gfile.Exists(modelParams['trainLogDir']):
+            tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
+        tf.gfile.MakeDirs(modelParams['trainLogDir'])
+    train(modelParams, epochNumber)
 
 
 if __name__ == '__main__':
