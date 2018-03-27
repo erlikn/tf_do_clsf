@@ -88,48 +88,48 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
         # get updated bit target
         newBitTarget = kitti.get_multi_bit_target(bTargetVals[i], newRanges, bTargetP.shape[2]) # make sure this function is compatible with nT > 2
 
-    # Apply the prediction from extracted parameters 
-    
-    #print("oldRNG === ", bRngs[i,0,:,3])
-    #print("newRNG === ", newRanges[0,:,0])
-    #print("difRNG === ", newRanges[0,:,0]-bRngs[i,0,:,3])
-    #print('tartParams ========= ', bTargetT.shape)
-    #print('tarPParams ========= ', bTargetP.shape)
-    #print('predParams ========= ', predParam.shape)
-    #print('old Ranges ========= ', bRngs.shape)
-    #print('new Ranges ========= ', newRanges.shape)
-    #print('target val ========= ', bTargetVals[i,0,numTuples-2])
-    #print('target val =5=28= ', newRanges[0,5], newRanges[0,28])
-    #print('target rng =-1=0=+1= ', newRanges[0,np.argmax(newBitTarget)-1], newRanges[0,np.argmax(newBitTarget)], newRanges[0,np.argmax(newBitTarget)+1])
-    #print('pred   val ========= ', predParam[1])
+    # If True show the graphs, If False skip
+    if (False):
+        print("oldRNG === ", bRngs[i,0,:,3])
+        print("newRNG === ", newRanges[0,:,0])
+        print("difRNG === ", newRanges[0,:,0]-bRngs[i,0,:,3])
+        print('tartParams ========= ', bTargetT.shape)
+        print('tarPParams ========= ', bTargetP.shape)
+        print('predParams ========= ', predParam.shape)
+        print('old Ranges ========= ', bRngs.shape)
+        print('new Ranges ========= ', newRanges.shape)
+        print('target val ========= ', bTargetVals[i,0,numTuples-2])
+        print('target val =5=28= ', newRanges[0,5], newRanges[0,28])
+        print('target rng =-1=0=+1= ', newRanges[0,np.argmax(newBitTarget)-1], newRanges[0,np.argmax(newBitTarget)], newRanges[0,np.argmax(newBitTarget)+1])
+        print('pred   val ========= ', predParam[1])
 
-    ##print(bTargetP[i,0,:,0])
-    #import matplotlib.pyplot as plt
-    #plt.subplot(311)
-    #plt.plot(bTargetT[i,0,:,3])
-    #normP = bTargetP[i,0,:,0]/np.linalg.norm(bTargetP[i,0,:,0])
-    #plt.plot(normP)
-    #plt.title('Target Prediction')
-    ##plt.show()
-    #
-    #plt.subplot(312)
-    #plt.plot(bRngs[i,0,:,3])
-    ##plt.plot(newRanges[0,2:31,0]-newRanges[0,1:30,0])
-    #plt.plot(newRanges[0,:,0])
-    #plt.title('Ranges')
-    ##plt.show()
-    #
-    #plt.subplot(313)
-    #plt.plot(newBitTarget[0])
-    ##plt.plot(newRanges[0,1:31,0]-newRanges[0,0:30,0])
-    #plt.title('Ranges diff')
-    #plt.show()
-    #print('TargetVals ====', bTargetVals.shape)
-    #print('BTarget    ====', bTargetT.shape)
-    #print('Ranges     ====', bRngs.shape)
-    #print('newBTarget    ====', newBitTarget.shape)
-    #print('newRanges     ====', newRanges.shape)
-    
+        #print(bTargetP[i,0,:,0])
+        import matplotlib.pyplot as plt
+        plt.subplot(311)
+        plt.plot(bTargetT[i,0,:,3])
+        normP = bTargetP[i,0,:,0]/np.linalg.norm(bTargetP[i,0,:,0])
+        plt.plot(normP)
+        plt.title('Target Prediction')
+        #plt.show()
+
+        plt.subplot(312)
+        plt.plot(bRngs[i,0,:,3])
+        #plt.plot(newRanges[0,2:31,0]-newRanges[0,1:30,0])
+        plt.plot(newRanges[0,:,0])
+        plt.title('Ranges')
+        #plt.show()
+
+        plt.subplot(313)
+        plt.plot(newBitTarget[0])
+        #plt.plot(newRanges[0,1:31,0]-newRanges[0,0:30,0])
+        plt.title('Ranges diff')
+        plt.show()
+        print('TargetVals ====', bTargetVals.shape)
+        print('BTarget    ====', bTargetT.shape)
+        print('Ranges     ====', bRngs.shape)
+        print('newBTarget    ====', newBitTarget.shape)
+        print('newRanges     ====', newRanges.shape)
+
     # Update the target values and labels
     if kwargs.get('lastTuple'):
         outRanges = bRngs[i].copy()

@@ -125,6 +125,10 @@ def write_iterative(runName, itrNum):
         dataLocal['classificationModel'] = {'Model' : True, 'binSize' : 32}
         itr_180111_ITR_B_clsf_long(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
     ####
+    elif runName == '180326_ITR_B_4clsf_lastTup': # using 171003_ITR_B but with gaussian location softmax loss for all last tuple
+        dataLocal['classificationModel'] = {'Model' : True, 'binSize' : 32}
+        itr_180111_ITR_B_clsf_long_glsmcel2(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, dataLocal)
+    ####
     else:
         print("--error: Model name not found!")
         return False
@@ -330,6 +334,58 @@ def itr_180111_ITR_B_clsf_long(reCompileITR, trainLogDirBase, testLogDirBase, ru
         else:
             data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']*(data['numTuple']-1)
         data['lossFunction'] = "_params_classification_softmaxCrossentropy_loss_nTuple"
+        
+        ## runs
+        data['trainMaxSteps'] = 42000
+        data['trainMaxSteps'] = 100000
+        data['numEpochsPerDecay'] = float(data['trainMaxSteps']/3)
+
+        runName = runPrefix+str(itrNum)
+        ### Auto Iteration Number
+        if itrNum == 1:
+            data['trainDataDir'] = '../Data/kitti/train_tfrecords_clsf_5tpl'
+            data['testDataDir'] = '../Data/kitti/test_tfrecords_clsf_5tpl'
+        ### Auto Iteration Number 2,3,4
+        if itrNum > 1:
+            data['trainDataDir'] = '../Data/kitti/train_tfrecords_iterative_5tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = '../Data/kitti/test_tfrecords_iterative_5tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+        ####
+        data['trainLogDir'] = trainLogDirBase + runName
+        data['testLogDir'] = testLogDirBase + runName
+        data['warpedTrainDataDir'] = '../Data/kitti/train_tfrecords_iterative_5tpl/' + runName
+        data['warpedTestDataDir'] = '../Data/kitti/test_tfrecords_iterative_5tpl/'+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['tMatTrainDir'] = data['trainLogDir']+'/target'
+        data['tMatTestDir'] = data['testLogDir']+'/target'
+        _set_folders(data['tMatTrainDir'])
+        _set_folders(data['tMatTestDir'])
+        data['warpOriginalImage'] = True
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+
+def itr_180111_ITR_B_clsf_long_glsmcel2(reCompileITR, trainLogDirBase, testLogDirBase, runName, itrNum, data):
+    if reCompileITR:
+        runPrefix = runName+'_'
+        data['modelName'] = 'twin_cnn_4p4l2f_inception'
+        data['numParallelModules'] = 5
+        data['imageDepthChannels'] = 5
+        data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
+        data['modelShape'] = [32, 64, 32, 64, 64, 128, 64, 128, 1024]
+        data['trainBatchSize'] = 6#8#16
+        data['testBatchSize'] = 6#8#16
+        data['numTrainDatasetExamples'] = 20400
+        data['numTestDatasetExamples'] = 2790
+        data['numTuple'] = 5
+        data['logicalOutputSize'] = 6
+        data['lastTuple'] = True
+        # For all tuples
+        if data['lastTuple']:
+            data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
+        else:
+            data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']*(data['numTuple']-1)
+        data['lossFunction'] = "_params_classification_gaussian_softmaxCrossentropy_loss_nTuple"
         
         ## runs
         data['trainMaxSteps'] = 42000

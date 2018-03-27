@@ -158,6 +158,27 @@ def _params_classification_softmaxCrossentropy_loss_nTuple(targetP, targetT, nTu
     #smce_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), name="loss_smce_sum")
     return smce_loss
 
+def _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(targetP, targetT, nTuple, activeBatchSize):
+    '''
+    Takes in the targetP and targetT and calculates the softmax-cross entropy loss for each parameter
+    and sums them for each instance and sum again for each tuple in the batch
+    TargetT dimensions are [activeBatchSize, rows=6, cols=32, nTuple]
+    '''
+    targetT = tf.cast(targetT, tf.float32)
+    targetP = tf.cast(targetP, tf.float32)
+    ############################
+    # find argmax of the target
+    # find argmax of the loss
+    # apply a gaussian based on index diff based on target and loss
+    ############################
+    softmaxLoss = tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2)
+    ### location sensetive classing, (distance^2)/5 ===> 5 means vicinity of index
+    locationLoss = tf.multiply(tf.cast(tf.multiply((tf.argmax(targetP, axis=2)-tf.argmax(targetT, axis=2)),(tf.argmax(targetP, axis=2)-tf.argmax(targetT, axis=2))),tf.float32),(1/5))
+    ### weight softmaxloss by location loss and get the l2 loss of batches
+    smce_loss = tf.nn.l2_loss(tf.multiply(softmaxLoss, locationLoss), name="loss_glsmce_l2")
+    #smce_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), name="loss_smce_sum")
+    return smce_loss
+
 def loss(pred, tval, **kwargs):
     """
     Choose the proper loss function and call it.
@@ -180,4 +201,9 @@ def loss(pred, tval, **kwargs):
             return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, 1, kwargs.get('activeBatchSize'))
         else:
             return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+    if lossFunction == '_params_classification_gaussian_softmaxCrossentropy_loss_nTuple':
+        if kwargs.get('lastTuple'):
+            return _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(pred, tval, 1, kwargs.get('activeBatchSize'))
+        else:
+            return _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
             
