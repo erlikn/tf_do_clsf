@@ -44,7 +44,9 @@ PCL_COLS = 62074 # All PCL files should have rows
 PCL_ROWS = 3
 
 ############ BINS
-BIN_SIZE = 32
+#BIN_SIZE = 32
+BIN_SIZE = 256
+
 
 BIN_min = [-0.021, -0.075, -0.027, -0.24, -0.20, -2.74]
 BIN_max = [ 0.019,  0.084,  0.023,  0.30,  0.20, 0.018]
@@ -409,7 +411,7 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
                              xyziList,# ntuplex3xPCL_COLS
                              imgDepthList,# ntuplex128x512
                              poseB2AList,# (ntuple-1)x6
-                             bitB2AList,# (ntuple-1)x6x32
+                             bitB2AList,# (ntuple-1)x6xBIN_SIZE
                              tfRecFolder,
                              numTuples) 
             # Oldest smaple is to be forgotten
@@ -475,12 +477,9 @@ seqIDtest = ['09', '10']
 
 NUM_TUPLES = 5
 
-if NUM_TUPLES == 2:
-    traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf/"
-    testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf/"
-elif NUM_TUPLES == 5:
-    traintfRecordFLD = "../Data/kitti/train_tfrecords_clsf_5tpl/"
-    testtfRecordFLD = "../Data/kitti/test_tfrecords_clsf_5tpl/"
+if NUM_TUPLES==2 or NUM_TUPLES==5:
+    traintfRecordFLD = "../Data/kitti/train_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+    testtfRecordFLD = "../Data/kitti/test_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
 else:
     print("Folders for Num Tuples = ", NUM_TUPLES, "doesn't exist!!! (invalid option)")
     exit()

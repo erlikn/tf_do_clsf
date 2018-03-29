@@ -177,10 +177,11 @@ def _get_p_map(pPose):
         pathMap = np.append(pathMap, origin, axis=1)
     return pathMap
 
-def _get_p_map_w_orig(pPoseAB, gPose2o):
+def _get_p_map_w_orig(pPoseAB, gPose2o, numTuple):
     """
     get the predicted truth path map
     poses are w.r.t. previous frame
+    number of tuples in the batch. numTuple-1 transformation matrices. numTuple-2 will be added from gPose2o
     """
     ## origin = np.array([[0], [0], [0]], dtype=np.float32)
     ## pathMap = np.ndarray(shape=[3,0], dtype=np.float32)
@@ -314,7 +315,7 @@ def evaluate(modelParamsList, prevPParam=list()):
             PParamList.append(pParam)
             pPose = _get_pose_from_param(pParam)
             # Use only sequential
-            pMapSeqList.append(_get_p_map_w_orig(pPose, gtPose))
+            pMapSeqList.append(_get_p_map_w_orig(pPose, gtPose, modelParams['numTuple']))
             # Use GTforLoc
             pMapSeqWgtFramesList.append(_get_p_map_w_orig_points(pPose, gtPose))
 
