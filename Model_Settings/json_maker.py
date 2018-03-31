@@ -403,13 +403,13 @@ def itr_180111_ITR_B_clsf_long_glsmcel2(reCompileITR, trainLogDirBase, testLogDi
             data['testDataDir'] = '../Data/kitti/test_tfrec_clsf_'+str(data['numTuple'])+'_tpl_'+str(data['classificationModel']['binSize'])+'_bin'
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
-            data['trainDataDir'] = '../Data/kitti/train_tfrecords_iterative_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
-            data['testDataDir'] = '../Data/kitti/test_tfrecords_iterative_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['trainDataDir'] = '../Data/kitti/train_tfrec_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = '../Data/kitti/test_tfrec_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
         ####
         data['trainLogDir'] = trainLogDirBase + runName
         data['testLogDir'] = testLogDirBase + runName
-        data['warpedTrainDataDir'] = '../Data/kitti/train_tfrecords_iterative_'+str(data['numTuple'])+'_tpl/' + runName
-        data['warpedTestDataDir'] = '../Data/kitti/test_tfrecords_iterative_'+str(data['numTuple'])+'_tpl/'+ runName
+        data['warpedTrainDataDir'] = '../Data/kitti/train_tfrec_itr_'+str(data['numTuple'])+'_tpl/' + runName
+        data['warpedTestDataDir'] = '../Data/kitti/test_tfrec_itr_'+str(data['numTuple'])+'_tpl/'+ runName
         _set_folders(data['warpedTrainDataDir'])
         _set_folders(data['warpedTestDataDir'])
         data['tMatTrainDir'] = data['trainLogDir']+'/target'
