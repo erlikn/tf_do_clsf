@@ -301,7 +301,7 @@ def tfrecord_writer_ntuple(fileID, pcl, imgDepth, tMatTarget, tfRecFolder, numTu
     writer = tf.python_io.TFRecordWriter(tfRecordPath)
     example = tf.train.Example(features=tf.train.Features(feature={
         'fileID': _int64_array(fileID),
-        'images': _bytets_feature(flatImageList),
+        'images': _bytes_feature(flatImageList),
         'pcl': _float_nparray(pclList), # 2D np array
         'targetn6': _float_nparray(tMatTargetList) # 2D np array
         }))

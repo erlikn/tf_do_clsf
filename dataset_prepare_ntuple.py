@@ -28,6 +28,18 @@ import Data_IO.tfrecord_io as tfrecord_io
 import Data_IO.kitti_shared as kitti
 
 
+seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
+seqIDtest = ['09', '10']
+#######################
+NUM_TUPLES = 5
+
+# Target to be 6-D parameters (True) or transformation matrix 12 values (False)
+WRITE_PARAMS = False
+# Target is classification (True) or regression (False)
+WRITE_CLSF = False
+
+#######################
+
 # xyzi[0]/rXYZ out of [-1,1]  this is reveresd
 MIN_X_R = -1
 MAX_X_R = 1
@@ -47,15 +59,19 @@ PCL_ROWS = 3
 #BIN_SIZE = 32
 BIN_SIZE = 256
 
-
-BIN_min = [-0.021, -0.075, -0.027, -0.24, -0.20, -2.74]
-BIN_max = [ 0.019,  0.084,  0.023,  0.30,  0.20, 0.018]
-
-
-BIN_rng = list()
-for i in range(len(BIN_min)):
-    BIN_rng.append(np.append(np.arange(BIN_min[i],BIN_max[i], (BIN_max[i]-BIN_min[i])/BIN_SIZE), [BIN_max[i]], axis=0))
-BIN_rng = np.asarray(BIN_rng, np.float32)
+if WRITE_CLSF:
+    if WRITE_PARAMS:
+        # 6-D paramter min and max
+        BIN_min = [-0.021, -0.075, -0.027, -0.24, -0.20, -2.74]
+        BIN_max = [ 0.019,  0.084,  0.023,  0.30,  0.20, 0.018]
+    else:
+        # 12 value transformation value min and max
+        BIN_min = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        BIN_max = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    BIN_rng = list()
+    for i in range(len(BIN_min)):
+        BIN_rng.append(np.append(np.arange(BIN_min[i],BIN_max[i], (BIN_max[i]-BIN_min[i])/BIN_SIZE), [BIN_max[i]], axis=0))
+    BIN_rng = np.asarray(BIN_rng, np.float32)
 
 def image_process_subMean_divStd(img):
     out = img - np.mean(img)
@@ -92,14 +108,38 @@ def odometery_writer(ID,
         raise Exception('numTuples is less or equal to 1. BIN_rng is should be altered...')
     filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
     tfrecord_io.tfrecord_writer_ntuple_classification(ID,
-                                pclNumpy,
-                                imgDepthNumpy,
-                                tMatTargetNumpy,
-                                bitTargetNumpy,
-                                rngNumpy,
-                                tfRecFolder,
-                                numTuples,
-                                filename)
+                                                      pclNumpy,
+                                                      imgDepthNumpy,
+                                                      tMatTargetNumpy,
+                                                      bitTargetNumpy,
+                                                      rngNumpy,
+                                                      tfRecFolder,
+                                                      numTuples,
+                                                      filename)
+    return
+
+def odometery_writer(ID,
+                     pclList,
+                     imgDepthList,
+                     tMatTargetList,
+                     tfRecFolder,
+                     numTuples):
+    '''
+    '''
+    pclNumpy = np.asarray(pclList)
+    pclNumpy = np.swapaxes(np.swapaxes(pclNumpy,0,1),1,2) # rows_XYZ x cols_Points x n
+    imgDepthNumpy = np.asarray(imgDepthList)
+    imgDepthNumpy = np.swapaxes(np.swapaxes(imgDepthNumpy,0,1),1,2) # rows_128 x cols_512 x n
+    tMatTargetNumpy = np.asarray(tMatTargetList)
+    tMatTargetNumpy = np.swapaxes(tMatTargetNumpy,0,1) # 6D_data x n-1
+    filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
+    tfrecord_io.tfrecord_writer_ntuple(ID,
+                                       pclNumpy,
+                                       imgDepthNumpy,
+                                       tMatTargetNumpy,
+                                       tfRecFolder,
+                                       numTuples,
+                                       filename)
     return
 ##################################
 def _zero_pad(xyzi, num):
@@ -400,25 +440,42 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
                 # makes sure first & second pcl and pose are read to have full transformation
             # get target pose  B->A also changes to abgxyz : get abgxyzb-abgxyza
             pose_B2A = _get_tMat_B_2_A(poseX20List[(k-j)-1], poseX20List[(k-j)]) # Use last two
-            abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
-            bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_SIZE)
-            poseB2AList.append(abgxyzB2A)
-            bitB2AList.append(bit)
+            if WRITE_PARAMS:
+                # 6-D parameters
+                abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
+            else:
+                # Transformation matrix 12 values
+                abgxyzB2A = pose_B2A
+            if WRITE_CLSF:
+                bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_SIZE)
+                bitB2AList.append(bit)
+                
+            poseB2AList.append(abgxyzB2A.reshape(-1))
+            
         else:
             # numTuples are read and ready to be dumped on permanent memory
             fileID = [100+int(seqID), 100000+j, 100000+(k)] # k=j+(numTuples-1)
-            odometery_writer(fileID,# 3 ints
-                             xyziList,# ntuplex3xPCL_COLS
-                             imgDepthList,# ntuplex128x512
-                             poseB2AList,# (ntuple-1)x6
-                             bitB2AList,# (ntuple-1)x6xBIN_SIZE
-                             tfRecFolder,
-                             numTuples) 
+            if WRITE_CLSF:
+                odometery_writer(fileID,# 3 ints
+                                 xyziList,# ntuplex3xPCL_COLS
+                                 imgDepthList,# ntuplex128x512
+                                 poseB2AList,# (ntuple-1)x(6 or 12)
+                                 bitB2AList,# (ntuple-1)x6xBIN_SIZE
+                                 tfRecFolder,
+                                 numTuples)
+                # Oldest smaple is to be forgotten
+                bitB2AList.pop(0)
+            else:
+                odometery_writer(fileID,# 3 ints
+                                 xyziList,# ntuplex3xPCL_COLS
+                                 imgDepthList,# ntuplex128x512
+                                 poseB2AList,# (ntuple-1)x(6 or 12)
+                                 tfRecFolder,
+                                 numTuples) 
             # Oldest smaple is to be forgotten
             xyziList.pop(0)
             imgDepthList.pop(0)
             poseB2AList.pop(0)
-            bitB2AList.pop(0)
             poseX20List.pop(0)
         
     print("SeqID completed : ", seqID)
@@ -471,15 +528,14 @@ def _set_folders(folderPath):
 pclPath = '../Data/kitti/pointcloud/'
 posePath = '../Data/kitti/poses/'
 
-seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
-seqIDtest = ['09', '10']
-
-
-NUM_TUPLES = 5
-
 if NUM_TUPLES==2 or NUM_TUPLES==5:
-    traintfRecordFLD = "../Data/kitti/train_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
-    testtfRecordFLD = "../Data/kitti/test_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+    if WRITE_CLSF:
+        traintfRecordFLD = "../Data/kitti/train_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+        testtfRecordFLD = "../Data/kitti/test_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+    else:
+        traintfRecordFLD = "../Data/kitti/train_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_reg/"
+        testtfRecordFLD = "../Data/kitti/test_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_reg/"
+ 
 else:
     print("Folders for Num Tuples = ", NUM_TUPLES, "doesn't exist!!! (invalid option)")
     exit()
@@ -487,6 +543,12 @@ else:
 print("Num tuples = ", NUM_TUPLES)
 print("Train folder = ", traintfRecordFLD)
 print("Test folder = ", testtfRecordFLD)
+
+if WRITE_PARAMS:
+    print("Target mode = 6-D parameteres")
+else:
+    print("Target mode = Transformation matrix 12 values")
+
 if input("(Overwrite WARNING) Is the Num Tuples set to correct value? (y) ") != "y":
     print("Please consider changing it to avoid overwrite!")
     exit()

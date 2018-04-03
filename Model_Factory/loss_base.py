@@ -179,6 +179,26 @@ def _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(targetP, tar
     #smce_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), name="loss_smce_sum")
     return smce_loss
 
+def _transformation_loss_nTuple_last(targetP, targetT, activeBatchSize):
+    '''
+    targetP = [activeBatchSize x 12]
+    targetT = [activeBatchSize x 12]
+    '''
+    # 12 transformation matrix
+    # Reshape each array to 3x4 and append [0,0,0,1] to each transformation matrix
+    pad = np.array([[0, 0, 0, 1]], dtype=np.float32)
+    pad = np.repeat(pad, activeBatchSize, axis=0)# [activeBatchSize x 4]
+    targetP = tf.reshape(tf.concat([targetP,pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
+    targetT = tf.reshape(tf.concat([targetT,pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
+    # Initialize points
+    points = tf.constant([[0,0,0,10],[0,0,10,0],[0,10,0,0],[10,0,0,0]], dtype=tf.float32)
+    # Transform points based on prediction
+    pPoints = tf.multiply(targetP, points)
+    # Transform points based on target
+    tPoints = tf.multiply(targetT, points)
+    # Get and return L2 Loss between corresponding points
+    return _l2_loss(pPoints, tPoints)
+
 def loss(pred, tval, **kwargs):
     """
     Choose the proper loss function and call it.
@@ -206,4 +226,6 @@ def loss(pred, tval, **kwargs):
             return _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(pred, tval, 1, kwargs.get('activeBatchSize'))
         else:
             return _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
-            
+    if lossFunction == '_transformation_loss_nTuple_last':
+        return _transformation_loss_nTuple_last(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+
