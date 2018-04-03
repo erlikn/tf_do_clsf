@@ -101,26 +101,36 @@ def train(modelParams, epochNumber):
         # Get images and transformation for model_cnn.
         images, pclA, targetT, bitTarget, rngs, tfrecFileIDs = data_input.inputs(**modelParams)
         print('Input        ready')
+
         # Build a Graph that computes the HAB predictions from the
-        # inference model.
-        targetP = model_cnn.inference(images, **modelParams)
-        # Calculate loss. 2 options:
-
-        # use mask to get degrees significant
-        # What about adaptive mask to zoom into differences at each CNN stack !!!
-        ########## model_cnn.loss is called in the loss function
-        #loss = weighted_loss(targetP, targetT, **modelParams)
-        # CLASSIFICATION
-        if modelParams.get('lastTuple'):
-            # for training on last tuple        
-            loss = model_cnn.loss(targetP, bitTarget[:,:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+        # inference model
+        targetP = model_cnn.inference(images, **modelParams)                
+        # loss model
+        if modelParams.get('classificationModel'):
+            print('Classification model...')
+            if modelParams.get('lastTuple'):
+                # Training with all, loss on the last tuple only
+                print("Using all ", modelParams.get('numTuples'), " to predict (clsf) only the LAST transformation")
+                # loss on last tuple
+                loss = model_cnn.loss(targetP, bitTarget[:,:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+            else:
+                # Training on all, loss on all
+                print("Using all ", modelParams.get('numTuples'), " to predict (clsf) all", modelParams.get('numTuples'), " transformations")
+                # for training on all tuples
+                loss = model_cnn.loss(targetP, bitTarget, **modelParams)
         else:
-            # for training on all tuples
-            loss = model_cnn.loss(targetP, bitTarget, **modelParams)
-        print('--------targetP', targetP.get_shape())
-        print('--------rngs', rngs.get_shape())
-
-
+            print('Regression model...')
+            if modelParams.get('lastTuple'):
+                # Training with all, loss on the last tuple only
+                print("Using all ", modelParams.get('numTuples'), " to predict (rgs) only the LAST transformation")
+                # loss on last tuple
+                loss = model_cnn.loss(targetP, bitTarget[:,:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+            else:
+                # Training on all, loss on all
+                print("Using all ", modelParams.get('numTuples'), " to predict (rgs) all", modelParams.get('numTuples'), " transformations")
+                # for training on all tuples
+                loss = model_cnn.loss(targetP, bitTarget, **modelParams)
+                
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
         opTrain = model_cnn.train(loss, globalStep, **modelParams)
@@ -264,12 +274,15 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     print('')
     print('')
 
-    print('Train Main is built and Dataset is complied with n = 2 tuples!!!')
+    if modelParams.get('lastTuple'):
+        print('!!! Training model is built to use only the the last 2 tuples from the existing ',modelParams['numTuple'],' tuples !!!')
+    else:
+        print('!!! Training model is built to use all of the ' modelParams['numTuple'],' tuples !!!')
     print('')
     if epochNumber == 0:
-        if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
-            print("Please consider changing logs directory in order to avoid overwrite!")
-            return
+        #if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
+        #    print("Please consider changing logs directory in order to avoid overwrite!")
+        #    return
         if tf.gfile.Exists(modelParams['trainLogDir']):
             tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
         tf.gfile.MakeDirs(modelParams['trainLogDir'])

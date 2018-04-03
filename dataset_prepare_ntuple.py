@@ -31,7 +31,7 @@ import Data_IO.kitti_shared as kitti
 seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
 seqIDtest = ['09', '10']
 #######################
-NUM_TUPLES = 5
+NUM_TUPLES = 2
 
 # Target to be 6-D parameters (True) or transformation matrix 12 values (False)
 WRITE_PARAMS = False
@@ -530,11 +530,15 @@ posePath = '../Data/kitti/poses/'
 
 if NUM_TUPLES==2 or NUM_TUPLES==5:
     if WRITE_CLSF:
-        traintfRecordFLD = "../Data/kitti/train_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
-        testtfRecordFLD = "../Data/kitti/test_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+        traintfRecordFLD = "../Data/kitti/train_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+        testtfRecordFLD = "../Data/kitti/test_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
     else:
-        traintfRecordFLD = "../Data/kitti/train_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_reg/"
-        testtfRecordFLD = "../Data/kitti/test_tfrec_clsf_"+str(NUM_TUPLES)+"_tpl_reg/"
+        if WRITE_PARAMS:
+            traintfRecordFLD = "../Data/kitti/train_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
+            testtfRecordFLD = "../Data/kitti/test_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
+        else:
+            traintfRecordFLD = "../Data/kitti/train_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
+            testtfRecordFLD = "../Data/kitti/test_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
  
 else:
     print("Folders for Num Tuples = ", NUM_TUPLES, "doesn't exist!!! (invalid option)")

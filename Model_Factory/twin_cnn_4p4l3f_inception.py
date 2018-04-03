@@ -54,7 +54,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
 
     batchSize = kwargs.get('activeBatchSize', None)
 
-    ############# CONV1_TWIN 3x3 conv, 2 input dims, 2 parallel modules, 64 output dims (filters)
+    ############# CONV1_TWIN 3x3 conv
     fireOut, prevExpandDim = model_base.conv_fire_parallel_inception_module('conv1', images, kwargs.get('imageDepthChannels'),
                                                                   {'cnn1x1': modelShape[0], 'cnn3x3': modelShape[0], 'cnn5x5': modelShape[0]},
                                                                   wd, **kwargs)
