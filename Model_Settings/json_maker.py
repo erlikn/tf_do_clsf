@@ -417,14 +417,14 @@ def itr_180111_ITR_B_reg_trnsfLoss(reCompileITR, trainLogDirBase, testLogDirBase
         data['testBatchSize'] = 6#8#16
         data['numTrainDatasetExamples'] = 20400
         data['numTestDatasetExamples'] = 2790
-        data['numTuple'] = 5
+        data['numTuple'] = 2
         data['logicalOutputSize'] = 12 # transformation matrix
         data['lastTuple'] = True
         # For all tuples
         if data['lastTuple']:
-            data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']
+            data['networkOutputSize'] = data['logicalOutputSize']
         else:
-            data['networkOutputSize'] = data['logicalOutputSize']*data['classificationModel']['binSize']*(data['numTuple']-1)
+            data['networkOutputSize'] = data['logicalOutputSize']*(data['numTuple']-1)
         data['lossFunction'] = "_transformation_loss_nTuple_last"
         
         ## runs

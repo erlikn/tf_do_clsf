@@ -178,8 +178,7 @@ def train(modelParams, epochNumber):
         durationSumAll = 0
         for step in xrange(epochNumber, modelParams['maxSteps']):
             startTime = time.time()
-            #_, lossValue = sess.run([opTrain, loss])
-            _, lossValue, bitPreEV = sess.run([opTrain, loss, targetP])
+            _, lossValue = sess.run([opTrain, loss])
             #print('lossValue', lossValue)
             #zzz = np.reshape(np.exp(bitPreEV[0]), (6,32))
             #print(zzz)
@@ -277,7 +276,7 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     if modelParams.get('lastTuple'):
         print('!!! Training model is built to use only the the last 2 tuples from the existing ',modelParams['numTuple'],' tuples !!!')
     else:
-        print('!!! Training model is built to use all of the ' modelParams['numTuple'],' tuples !!!')
+        print('!!! Training model is built to use all of the ', modelParams['numTuple'],' tuples !!!')
     print('')
     if epochNumber == 0:
         #if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
