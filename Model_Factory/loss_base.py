@@ -190,8 +190,8 @@ def _transformation_loss_nTuple_last(targetP, targetT, activeBatchSize):
     pad = np.repeat(pad, activeBatchSize, axis=0)# [activeBatchSize x 4]
     targetP = tf.reshape(tf.concat([targetP,pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
     targetT = tf.reshape(tf.concat([targetT,pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
-    # Initialize points
-    points = tf.constant([[0,0,0,10],[0,0,10,0],[0,10,0,0],[10,0,0,0]], dtype=tf.float32)
+    # Initialize points : 4 points that don't lie in a plane
+    points = tf.constant([[0,10,0,5],[0,10,10,5],[0,10,0,0],[1,1,1,1]], dtype=tf.float32)
     # Transform points based on prediction
     pPoints = tf.multiply(targetP, points)
     # Transform points based on target
