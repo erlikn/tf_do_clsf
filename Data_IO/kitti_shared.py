@@ -69,10 +69,12 @@ def _get_params_from_tmat(tmat):
     beta_pitch = np.arctan2(-tmat[2][0], np.sqrt((tmat[2][1]*tmat[2][1])+(tmat[2][2]*tmat[2][2])))
     gamma_roll = np.arctan2(tmat[2][1], tmat[2][2])
     return np.array([alpha_yaw, beta_pitch, gamma_roll, dX, dY, dZ], dtype=np.float32)
+
 def _get_tmat_from_params(abgxyz):
     """
     abgxyz is a 6 valued vector: Alpha_yaw, Beta_pitch, Gamma_roll, DeltaX, DeltaY, DeltaZ
     Output is a 3x4 tmat
+
     For rotation matrix:
     http://planning.cs.uiuc.edu/node102.html
     For Translation side:
@@ -118,17 +120,22 @@ def get_residual_tMat_A2B(tMatA, tMatB):
     tMatResA2B = _remove_row4_tmat(tMatResA2B)
     return tMatResA2B
 
-def get_residual_tMat_Bp2B2A(tMatB2A, tMatB2Bp):
+def get_residual_tMat_p2t(s2t, s2p):
     '''
-        Input: 3x4, 3x4
-        return E as residual tMat 3x4
+        Input: 3x4 or 4x4
+            s2t = source to target
+            s2p = source to predicted
+        return E as residual tMat: 3x4
+            p2t = predicted to target
     '''
     # get tMat in the correct form
-    tMatB2A = _add_row4_tmat(_get_3x4_tmat(tMatB2A))
-    tMatB2Bp = _add_row4_tmat(_get_3x4_tmat(tMatB2Bp))
-    tMatResBp2A = np.matmul(tMatB2A, np.linalg.inv(tMatB2Bp))
-    tMatResBp2A = _remove_row4_tmat(tMatResBp2A)
-    return tMatResBp2A
+    if s2t.shape == (3,4):
+        s2t = _add_row4_tmat(_get_3x4_tmat(s2t))
+        s2p = _add_row4_tmat(_get_3x4_tmat(s2p))
+    p2t = np.matmul(s2t, np.linalg.inv(s2p))
+    p2t = _remove_row4_tmat(p2t)
+    return p2t
+
 ############################################################################
 def transform_pcl(xyz, tMat):
     '''

@@ -16,7 +16,7 @@ from __future__ import absolute_import
 from __future__ import division
 
 from datetime import datetime
-import os, os.path
+import os.path
 import time
 import logging
 import json
@@ -36,7 +36,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # import input & output modules 
 import Data_IO.data_input_ntuple as data_input
-import Data_IO.data_output_ntp_rgs_morph as data_output
+import Data_IO.data_output_ntuple_noMorph as data_output
 
 PHASE = 'train'
 
@@ -46,15 +46,13 @@ PHASE = 'train'
 ####################################################
 ####################################################
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_integer('printOutStep', 100,
-                            """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('summaryWriteStep', 100,
-                            """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('modelCheckpointStep', 1000,
-                            """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('ProgressStepReportStep', 250,
-                            """Number of batches to run.""")
-tf.app.flags.DEFINE_integer('ProgressStepReportOutputWrite', 250,
+#tf.app.flags.DEFINE_integer('printOutStep', 10,
+#                            """Number of batches to run.""")
+#tf.app.flags.DEFINE_integer('summaryWriteStep', 10,
+#                            """Number of batches to run.""")
+#tf.app.flags.DEFINE_integer('modelCheckpointStep', 100,
+#                            """Number of batches to run.""")
+tf.app.flags.DEFINE_integer('ProgressStepReportStep', 20,
                             """Number of batches to run.""")
 ####################################################
 ####################################################
@@ -82,14 +80,12 @@ def _set_control_params(modelParams):
 ####################################################
 ####################################################
 ####################################################
-def train(modelParams, epochNumber):
+def train(modelParams):
     # import corresponding model name as model_cnn, specifed at json file
     model_cnn = importlib.import_module('Model_Factory.'+modelParams['modelName'])
-    
-    if not os.path.exists(modelParams['dataDir']):
-        raise ValueError("No such data directory %s" % modelParams['dataDir'])
 
-    _setupLogging(os.path.join(modelParams['trainLogDir'], "genlog"))
+    if not os.path.exists(modelParams['dataDir']):
+        raise ValueError("No such data directory %s" % modelParams['dataDir'])    
 
     with tf.Graph().as_default():
         # track the number of train calls (basically number of batches processed)
@@ -121,7 +117,7 @@ def train(modelParams, epochNumber):
         else:
             print('Setting up   Regression model...')
             # Build input pipeline: Get images and transformation for model_cnn.
-            images, pclA, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
+            images, pclA, targetT, tfrecFileIDs = data_input.inputs(**modelParams)
             print('Input        ready')
             # Build a Graph
             # inference model
@@ -131,13 +127,13 @@ def train(modelParams, epochNumber):
                 # Training with all, loss on the last tuple only
                 print("Using all ", modelParams.get('numTuple'), " to predict (rgs) only the LAST transformation")
                 # loss on last tuple
-                loss = model_cnn.loss(prevP[:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], targetP, targetT[:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+                loss = model_cnn.loss(targetP, targetT[:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
             else:
                 # Training on all, loss on all
                 print("Using all ", modelParams.get('numTuple'), " to predict (rgs) all", modelParams.get('numTuple'), " transformations")
                 # for training on all tuples
-                loss = model_cnn.loss(prevP, targetP, targetT, **modelParams)
-                
+                loss = model_cnn.loss(targetP, targetT, **modelParams)
+        
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
         opTrain = model_cnn.train(loss, globalStep, **modelParams)
@@ -146,10 +142,6 @@ def train(modelParams, epochNumber):
         # Create a saver.
         saver = tf.train.Saver(tf.global_variables())
         print('Saver        ready')
-
-        # Build the summary operation based on the TF collection of Summaries.
-        summaryOp = tf.summary.merge_all()
-        print('MergeSummary ready')
 
         # Build an initialization operation to run below.
         #init = tf.initialize_all_variables()
@@ -162,97 +154,79 @@ def train(modelParams, epochNumber):
         config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
         sess = tf.Session(config=config)
         print('Session      ready')
-
+        
         #sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         #sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
         sess.run(init)
 
-
         # restore a saver.
-        if epochNumber > 0:
-            print('Loading Ex-Model with epoch number %d ...', epochNumber)
-            saver.restore(sess, (modelParams['trainLogDir']+'/model.ckpt-'+str(epochNumber)))
-            print('Ex-Model     loaded')
-
+        saver = tf.train.Saver(tf.global_variables())
+        saver.restore(sess, modelParams['trainLogDir']+'/model.ckpt-'+str(modelParams['trainMaxSteps']-1))
+        print('Model        loaded')
         # Start the queue runners.
         tf.train.start_queue_runners(sess=sess)
         print('QueueRunner  started')
 
-        summaryWriter = tf.summary.FileWriter(modelParams['trainLogDir'], sess.graph)
-        
-        print('Training     started')
+        print('Write        started')
+
+        ######### USE LATEST STATE TO WARP IMAGES
+        filesDictionaryAccum = {}
         durationSum = 0
         durationSumAll = 0
-        for step in xrange(epochNumber, modelParams['maxSteps']):
-            startTime = time.time()
-            _, lossValue = sess.run([opTrain, loss])
-            #print('lossValue', lossValue)
-            #zzz = np.reshape(np.exp(bitPreEV[0]), (6,32))
-            #print(zzz)
-            #print(bitPreEV[0].shape)
-            #for i in range(6):
-            #    print(zzz[i].sum())
-            duration = time.time() - startTime
-            durationSum += duration
-            assert not np.isnan(lossValue), 'Model diverged with loss = NaN'
-
-            if step % FLAGS.printOutStep == 0:
-                numExamplesPerStep = modelParams['activeBatchSize']
-                examplesPerSec = numExamplesPerStep / duration
-                secPerBatch = float(duration)
-                format_str = ('%s: step %d, loss = %.2f (%.1f examples/sec; %.3f '
-                              'sec/batch), loss/batch = %.2f')
-                logging.info(format_str % (datetime.now(), step, lossValue,
-                                           examplesPerSec, secPerBatch, lossValue/modelParams['activeBatchSize']))
-
-            if step % FLAGS.summaryWriteStep == 0:
-                summaryStr = sess.run(summaryOp)
-                summaryWriter.add_summary(summaryStr, step)
-
-            # Save the model checkpoint periodically.
-            if step % FLAGS.modelCheckpointStep == 0 or (step + 1) == modelParams['maxSteps']:
-                checkpointPath = os.path.join(modelParams['trainLogDir'], 'model.ckpt')
-                saver.save(sess, checkpointPath, global_step=step)
-            
-            # Print Progress Info
-            if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == modelParams['maxSteps']):
-                print('Progress: %.2f%%, Elapsed: %.2f mins, Training Completion in: %.2f mins --- %s' %
-                        (
-                            (100*step)/modelParams['maxSteps'],
-                            durationSum/60,
-                            (((durationSum*modelParams['maxSteps'])/(step+1))/60)-(durationSum/60),
-                            datetime.now()
+        if modelParams['writeWarpedImages']:
+            outputDIR = modelParams['warpedOutputFolder']+'/'
+            print("Using final training state to output processed tfrecords\noutput folder: ", outputDIR)
+            if tf.gfile.Exists(outputDIR):
+                tf.gfile.DeleteRecursively(outputDIR)
+            tf.gfile.MakeDirs(outputDIR)
+            lossValueSum = 0
+            stepsForOneDataRound = int((modelParams['numExamples']/modelParams['activeBatchSize']))+1
+            print('Warping %d images with batch size %d in %d steps' % (modelParams['numExamples'], modelParams['activeBatchSize'], stepsForOneDataRound))
+            for step in xrange(stepsForOneDataRound):
+                startTime = time.time()
+                ###################### NEEDS TO BE UPDATED
+                if modelParams.get('classificationModel'):
+                    evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, bitTarget, bitTargetP, rngs, tfrecFileIDs, loss])
+                else:
+                    evImages, evPcl, evtargetT, evtargetP, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, targetP, tfrecFileIDs, loss])
+                for fileIdx in range(modelParams['activeBatchSize']):
+                    fileIDname = str(evtfrecFileIDs[fileIdx][0]) + "_" + str(evtfrecFileIDs[fileIdx][1]) + "_" + str(evtfrecFileIDs[fileIdx][2])
+                    if (fileIDname in filesDictionaryAccum):
+                        filesDictionaryAccum[fileIDname]+=1
+                    else:
+                        filesDictionaryAccum[fileIDname]=1
+                #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
+                if modelParams.get('classificationModel'):
+                    data_output.output_clsf(evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, **modelParams)
+                else:
+                    data_output.output_clsf(evImages, evPcl, evtargetT, evtargetP, evtfrecFileIDs, **modelParams)
+                duration = time.time() - startTime
+                durationSum += duration
+                durationSumAll += duration
+                # Print Progress Info
+                if ((step % FLAGS.ProgressStepReportStep) == 0) or ((step+1) == stepsForOneDataRound):
+                    print('Number of files used in training', len(filesDictionaryAccum))
+                    print('Progress: %.2f%%, Loss: %.2f, Elapsed: %.2f mins, Training Completion in: %.2f mins --- %s' % 
+                            (
+                                (100*step)/stepsForOneDataRound,
+                                evlossValue/(step+1), durationSum/60,
+                                (((durationSum*stepsForOneDataRound)/(step+1))/60)-(durationSum/60),
+                                datetime.now()
+                            )
                         )
-                    )
+                    #print('Total Elapsed: %.2f mins, Total Completion in: %.2f mins' % (durationSumAll/60), ((((durationSumAll*stepsForOneDataRound)/(step+1))/60)-(durationSumAll/60)) )
+            print('Number of files used in training', len(filesDictionaryAccum))
+            filesAccum = np.array(list(filesDictionaryAccum.values()))
+            print('Access statistics for each file, mean max min std', np.mean(filesAccum), np.max(filesAccum), np.min(filesAccum), np.std(filesAccum))
+            print('Average training loss = %.2f - Average time per sample= %.2f s, Steps = %d' % (evlossValue/modelParams['activeBatchSize'], durationSum/(step*modelParams['activeBatchSize']), step))
 
-def _setupLogging(logPath):
-    # cleanup
-    if os.path.isfile(logPath):
-        os.remove(logPath)
-
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M',
-                        filename=logPath,
-                        filemode='w')
-
-    # also write out to the console
-    console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
-    console.setFormatter(logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s'))
-
-    # add the handler to the root logger
-    logging.getLogger().addHandler(console)
-
-    logging.info("Logging setup complete to %s" % logPath)
 
 def main(argv=None):  # pylint: disable=unused-argumDt
-    if (len(argv)<4):
-        print("Enter 'model name' and 'iteration number' and 'epoch number to load / 0 for new'")
+    if (len(argv)<3):
+        print("Enter 'model name' and 'iteration number'")
         return
     modelName = argv[1]
     itrNum = int(argv[2])
-    epochNumber = int(argv[3])
     if itrNum>4 or itrNum<0:
         print('iteration number should only be from 1 to 4 inclusive')
         return
@@ -268,7 +242,6 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     modelParams = _set_control_params(modelParams)
 
     print(modelParams['modelName'])
-    print('Training steps = %.1f' % float(modelParams['trainMaxSteps']))
     print('Rounds on datase = %.1f' % float((modelParams['trainBatchSize']*modelParams['trainMaxSteps'])/modelParams['numTrainDatasetExamples']))
     print('lossFunction = ', modelParams['lossFunction'])
     print('Train Input: %s' % modelParams['trainDataDir'])
@@ -280,23 +253,15 @@ def main(argv=None):  # pylint: disable=unused-argumDt
     print('')
     print('')
 
-    if modelParams.get('lastTuple'):
-        print('!!! Training model is built to use only the the last 2 tuples from the existing ',modelParams['numTuple'],' tuples !!!')
-    else:
-        print('!!! Training model is built to use all of the ', modelParams['numTuple'],' tuples !!!')
+    print('Train Main is built and Dataset is complied with n = 2 tuples!!!')
     print('')
-    if epochNumber == 0:
-        if not tf.gfile.Exists(modelParams['trainDataDir']):
-            print("Train input data folder doesn't exist...")
-            print(modelParams['trainDataDir'])
-            return
-        #if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
-        #    print("Please consider changing logs directory in order to avoid overwrite!")
-        #    return
-        if tf.gfile.Exists(modelParams['trainLogDir']):
-            tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
-        tf.gfile.MakeDirs(modelParams['trainLogDir'])
-    train(modelParams, epochNumber)
+    #if input("(Overwrite WARNING) Did you change logs directory? (y) ") != "y":
+    #    print("Please consider changing logs directory in order to avoid overwrite!")
+    #    return
+    #if tf.gfile.Exists(modelParams['trainLogDir']):
+    #    tf.gfile.DeleteRecursively(modelParams['trainLogDir'])
+    #tf.gfile.MakeDirs(modelParams['trainLogDir'])
+    train(modelParams)
 
 
 if __name__ == '__main__':

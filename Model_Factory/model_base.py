@@ -656,8 +656,8 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
         
         return fc, fireDims['fc']
 
-def loss(pred, tval, **kwargs):
-    return loss_base.loss(pred, tval, **kwargs)
+def loss(pred, tval, predPrev, **kwargs):
+    return loss_base.loss(pred, tval, predPrev, **kwargs)
 
 def train(loss, globalStep, **kwargs):
     if kwargs.get('optimizer') == 'MomentumOptimizer':

@@ -22,22 +22,7 @@ import multiprocessing
 import Data_IO.tfrecord_io as tfrecord_io
 import Data_IO.kitti_shared as kitti
 
-def _apply_prediction(pclB, targetT, targetP, **kwargs):
-    '''
-    Transform pclB, Calculate new targetT based on targetP, Create new depth image
-    Return:
-        - New PCLB
-        - New depthImageB
-    '''
-    # remove trailing zeros
-    pclA = kitti.remove_trailing_zeros(pclB)
-    # get transformed pclB based on targetP
-    tMatP = kitti._get_tmat_from_params(targetP) 
-    pclBTransformed = kitti.transform_pcl(pclB, tMatP)
-    # get new depth image of transformed pclB
-    depthImageB, _ = kitti.get_depth_image_pano_pclView(pclBTransformed)
-    pclBTransformed = kitti._zero_pad(pclBTransformed, kwargs.get('pclCols')-pclBTransformed.shape[1])
-    return pclBTransformed, depthImageB
+
 
 def output_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRngs, batchTFrecFileIDs, **kwargs):
     """
@@ -107,8 +92,6 @@ def output_loop_clsf(batchImages, batchPcl, bTargetVals, bTargetT, bTargetP, bRn
 
     # Apply the prediction from extracted parameters 
     
-    #print("oldRNG === ", bRngs[i,0,:,3])
-    #print("newRNG === ", newRanges[0,:,0])
     print("difRNG === ", newRanges[0,:,0]-bRngs[i,0,:,3])
     print('tartParams ========= ', bTargetT.shape)
     print('tarPParams ========= ', bTargetP.shape)

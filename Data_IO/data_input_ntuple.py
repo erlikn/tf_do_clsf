@@ -82,6 +82,76 @@ def validate_for_nan(tensorT):
     validity = tf.select(tf.is_nan(tensorMean), 0, 1) * tf.select(tf.is_inf(tensorMean), 0, 1)
     return validity
 
+def fetch_clsf(numPreprocessThreads, exampleSerialized, sampleData, **kwargs):
+    """Construct input for DeepHomography_CNN evaluation using the Reader ops.
+    
+    Args:
+
+    Returns:
+      batchImage: Images. 4D tensor of [batch_size, 128, 512, 2] size.
+      batchTargetT: 2D tensor of [batch_size, 6] size.
+      batchPCL: 2x 2D tensor of [batch_size, pclCols] size.
+      batchBitTarget: 6x32 dimensional label array
+      batchRngs: 6x(32+1) dimensional range representation of label array
+      tfrec: 3x int
+    Raises:
+      ValueError: If no dataDir
+    """
+    for _ in range(numPreprocessThreads):
+        # Parse a serialized Example proto to extract the image and metadata.
+        images, pcl, target, bitTarget, rngs, tfrecFileIDs = tfrecord_io.parse_example_proto_ntuple_classification(exampleSerialized, **kwargs)
+        sampleData.append([images, pcl, target, bitTarget, rngs, tfrecFileIDs])
+        
+    batchImages, batchPcl, batchTarget, batchBitTarget, batchRngs, batchTFrecFileIDs = tf.train.batch_join(sampleData,
+                                                                batch_size=kwargs.get('activeBatchSize'),
+                                                                capacity=2*numPreprocessThreads*kwargs.get('activeBatchSize'))
+    # Display the training images in the visualizer.
+    images = tf.split(batchImages, kwargs.get('imageDepthChannels'), axis=3)
+    for i in range(kwargs.get('imageDepthChannels')):
+        tf.summary.image('images_'+str(i)+'_', images[i])
+    
+    if kwargs.get('usefp16'):
+        batchImages = tf.cast(batchImages, tf.float16)
+        batchPclA = tf.cast(batchPcl, tf.float16)
+        batchTargetT = tf.cast(batchTargetT, tf.float16)
+    
+    return batchImages, batchPcl, batchTarget, batchBitTarget, batchRngs, batchTFrecFileIDs 
+
+def fetch_reg(numPreprocessThreads, exampleSerialized, sampleData, **kwargs):
+    """Construct input for DeepHomography_CNN evaluation using the Reader ops.
+    
+    Args:
+
+    Returns:
+      batchImage: Images. 4D tensor of [batch_size, 128, 512, 2] size.
+      batchPCL: 2x 2D tensor of [batch_size, pclCols] size.
+      batchTargetT:
+        In parametric model: 6 params
+        In transformation model: 12 values
+      batchTFrecFileIDs: 3x int
+    Raises:
+      ValueError: If no dataDir
+    """
+    for _ in range(numPreprocessThreads):
+        # Parse a serialized Example proto to extract the image and metadata.
+        images, pcl, target, prevPred, tfrecFileIDs = tfrecord_io.parse_example_proto_ntuple_prevPred(exampleSerialized, **kwargs)
+        sampleData.append([images, pcl, target, prevPred, tfrecFileIDs])
+        
+    batchImages, batchPcl, batchTarget, batchPrevPred, batchTFrecFileIDs = tf.train.batch_join(sampleData,
+                                                                            batch_size=kwargs.get('activeBatchSize'),
+                                                                            capacity=2*numPreprocessThreads*kwargs.get('activeBatchSize'))
+    # Display the training images in the visualizer.
+    images = tf.split(batchImages, kwargs.get('imageDepthChannels'), axis=3)
+    for i in range(kwargs.get('imageDepthChannels')):
+        tf.summary.image('images_'+str(i)+'_', images[i])
+    
+    if kwargs.get('usefp16'):
+        batchImages = tf.cast(batchImages, tf.float16)
+        batchPcl = tf.cast(batchPcl, tf.float16)
+        batchTarget = tf.cast(batchTarget, tf.float16)
+    
+    return batchImages, batchPcl, batchTarget, batchPrevPred, batchTFrecFileIDs 
+
 def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
     """Construct input for DeepHomography using the Reader ops.
     Args:
@@ -174,45 +244,31 @@ def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
             _, exampleSerialized = reader.read(filenameQueue) 
         # Read data from queue
         sampleData = []
-        for _ in range(numPreprocessThreads):
-            # Parse a serialized Example proto to extract the image and metadata.
-            images, pcl, target, bitTarget, rngs, tfrecFileIDs = tfrecord_io.parse_example_proto_ntuple_classification(exampleSerialized, **kwargs)
-            sampleData.append([images, pcl, target, bitTarget, rngs, tfrecFileIDs])
-        
-        batchImages, batchPcl, batchTarget, batchBitTarget, batchRngs, batchTFrecFileIDs = tf.train.batch_join(sampleData,
-                                                                    batch_size=kwargs.get('activeBatchSize'),
-                                                                    capacity=2*numPreprocessThreads*kwargs.get('activeBatchSize'))
-        #print(batchImages.get_shape(), batchPcl.get_shape(),
-        #      batchTarget.get_shape(), batchBitTarget.get_shape(),
-        #      batchRngs.get_shape())
 
-
-        batchImages = tf.cast(batchImages, tf.float32)
-        # Display the training images in the visualizer.
-        images = tf.split(batchImages, kwargs.get('imageDepthChannels'), axis=3)
-        for i in range(kwargs.get('imageDepthChannels')):
-            tf.summary.image('images_'+str(i)+'_', images[i])
-        
-        return batchImages, batchPcl, batchTarget, batchBitTarget, batchRngs, batchTFrecFileIDs
+        if kwargs.get('classificationModel'):
+            return fetch_clsf(numPreprocessThreads, exampleSerialized, sampleData, **kwargs)
+        else:
+            return fetch_reg(numPreprocessThreads, exampleSerialized, sampleData, **kwargs)
 
 def inputs(**kwargs):
-    """Construct input for DeepHomography_CNN evaluation using the Reader ops.
-    
+    """Construct input for deepvo evaluation using the Reader ops.
     Args:
 
     Returns:
       batchImage: Images. 4D tensor of [batch_size, 128, 512, 2] size.
-      batchHAB: 2D tensor of [batch_size, 12] size.
+      batchTargetT: 2D tensor of [batch_size, 6] size.
       batchPCL: 2x 2D tensor of [batch_size, pclCols] size.
       tfrec: 3x int
+      if Classsification model: (check fetch_clsf)
+            batchBitTarget: 6x32 dimensional label array
+            batchRngs: 6x(32+1) dimensional range representation of label array
+      if Regression model: (check fetch_reg)
+            batchTargetT:
+                In parametric model: 6 params
+                In transformation model: 12 values
     Raises:
       ValueError: If no dataDir
     """
     with tf.device('/cpu:0'):
-        batchImages, batchPcl, batchTargetT, batchBitTarget, batchRngs, batchTFrecFileIDs = fetch_inputs(**kwargs)
+        return fetch_inputs(**kwargs)
         
-        if kwargs.get('usefp16'):
-            batchImages = tf.cast(batchImages, tf.float16)
-            batchPclA = tf.cast(batchPcl, tf.float16)
-            batchTargetT = tf.cast(batchTargetT, tf.float16)
-    return batchImages, batchPcl, batchTargetT, batchBitTarget, batchRngs, batchTFrecFileIDs

@@ -36,7 +36,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # import input & output modules 
 import Data_IO.data_input_ntuple as data_input
-import Data_IO.data_output_ntuple_noMorph as data_output
+import Data_IO.data_output_ntp_rgs_morph as data_output
 
 PHASE = 'train'
 
@@ -94,30 +94,45 @@ def train(modelParams):
                                      initializer=tf.constant_initializer(0),
                                      trainable=False)
 
-        
-        # Get images and transformation for model_cnn.
-        images, pcl, targetT, bitTarget, rngs, tfrecFileIDs = data_input.inputs(**modelParams)
-        print('Input        ready')
-        # Build a Graph that computes the HAB predictions from the
-        # inference model.
-        bitTargetP = model_cnn.inference(images, **modelParams)
-        # Calculate loss. 2 options:
-        ######### WE DON'T NEED LOSS CALCULATION AS THIS IS NOT TRAINING
-        # use mask to get degrees significant
-        # What about adaptive mask to zoom into differences at each CNN stack !!!
-        ########## model_cnn.loss is called in the loss function
-        #loss = weighted_loss(bitTargetP, targetT, **modelParams)
-        # CLASSIFICATION
-        if modelParams.get('lastTuple'):
-            # for training on last tuple        
-            loss = model_cnn.loss(bitTargetP, bitTarget[:,:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+        # Building network
+        if modelParams.get('classificationModel'):
+            print('Setting up   Classification model...........')
+            # Build input pipeline: Get images and transformation for model_cnn.
+            images, pcl, targetT, bitTarget, rngs, tfrecFileIDs = data_input.inputs(**modelParams)
+            print('Input        ready')
+            # Build a Graph
+            # inference model
+            targetP = model_cnn.inference(images, **modelParams)
+            print('Graph        ready')
+            if modelParams.get('lastTuple'):
+                # Training with all, loss on the last tuple only
+                print("Using all ", modelParams.get('numTuple'), " to predict (clsf) only the LAST transformation")
+                # loss on last tuple
+                loss = model_cnn.loss(targetP, bitTarget[:,:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+            else:
+                # Training on all, loss on all
+                print("Using all ", modelParams.get('numTuple'), " to predict (clsf) all", modelParams.get('numTuple'), " transformations")
+                # for training on all tuples
+                loss = model_cnn.loss(targetP, bitTarget, **modelParams)
         else:
-            # for training on all tuples
-            loss = model_cnn.loss(bitTargetP, bitTarget, **modelParams)
-        #print('--------bitTargetP', bitTargetP.get_shape())
-        #print('--------bitTargetT', bitTarget.get_shape())
-        #print('--------targetT', targetT.get_shape())
-        #print('--------rngs', rngs.get_shape())
+            print('Setting up   Regression model...')
+            # Build input pipeline: Get images and transformation for model_cnn.
+            images, pcl, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
+            print('Input        ready')
+            # Build a Graph
+            # inference model
+            targetP = model_cnn.inference(images, **modelParams)
+            print('Graph        ready')
+            if modelParams.get('lastTuple'):
+                # Training with all, loss on the last tuple only
+                print("Using all ", modelParams.get('numTuple'), " to predict (rgs) only the LAST transformation")
+                # loss on last tuple
+                loss = model_cnn.loss(prevP[:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], targetP, targetT[:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+            else:
+                # Training on all, loss on all
+                print("Using all ", modelParams.get('numTuple'), " to predict (rgs) all", modelParams.get('numTuple'), " transformations")
+                # for training on all tuples
+                loss = model_cnn.loss(prevP, targetP, targetT, **modelParams)
         
         # Build a Graph that trains the model with one batch of examples and
         # updates the model parameters.
@@ -169,16 +184,27 @@ def train(modelParams):
             print('Warping %d images with batch size %d in %d steps' % (modelParams['numExamples'], modelParams['activeBatchSize'], stepsForOneDataRound))
             for step in xrange(stepsForOneDataRound):
                 startTime = time.time()
-                ###################### NEEDS TO BE UPDATED
-                evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, bitTarget, bitTargetP, rngs, tfrecFileIDs, loss])
-                for fileIdx in range(modelParams['activeBatchSize']):
+                ########################################################### < EVALUATE MODEL
+                if modelParams.get('classificationModel'):
+                    evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, bitTarget, bitTargetP, rngs, tfrecFileIDs, loss])
+                else:
+                    evImages, evPcl, evtargetT, evtargetP, evPrevPred, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, targetP, prevP, tfrecFileIDs, loss])
+                ########################################################### EVALUATE MODEL >
+                for fileIdx in range(modelParams.get('activeBatchSize')):
                     fileIDname = str(evtfrecFileIDs[fileIdx][0]) + "_" + str(evtfrecFileIDs[fileIdx][1]) + "_" + str(evtfrecFileIDs[fileIdx][2])
                     if (fileIDname in filesDictionaryAccum):
                         filesDictionaryAccum[fileIDname]+=1
                     else:
                         filesDictionaryAccum[fileIDname]=1
-                #### put imageA, warpped imageB by pHAB, HAB-pHAB as new HAB, changed fileaddress tfrecFileIDs
-                data_output.output_clsf(evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, **modelParams)
+                ########################################################### < WRITE OUTPUT
+                if modelParams.get('classificationModel'):
+                    data_output.output_clsf(evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, **modelParams)
+                else:
+                    if modelParams.get('morph')['model']=='depth': # depth or both
+                        data_output.output_rgs(evImages, evPcl, evtargetT, evtargetP, evPrevPred, evtfrecFileIDs, **modelParams)
+                    else:
+                        data_output.output_rgs(evImages, evPcl, evtargetT, evtargetP, 0, evtfrecFileIDs, **modelParams)    
+                ########################################################### WRITE OUTPUT >
                 duration = time.time() - startTime
                 durationSum += duration
                 durationSumAll += duration

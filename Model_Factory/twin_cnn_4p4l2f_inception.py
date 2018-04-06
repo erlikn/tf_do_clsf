@@ -173,7 +173,7 @@ def inference(images, **kwargs): #batchSize=None, phase='train', outLayer=[13,13
     
     return fireOut
 
-def loss(pred, target, **kwargs): # batchSize=Sne
+def loss(pred, target, predPrev = 0, **kwargs): # batchSize=Sne
     """Add L2Loss to all the trainable variables.
     Add summary for "Loss" and "Loss/avg".
     Args:
@@ -183,7 +183,7 @@ def loss(pred, target, **kwargs): # batchSize=Sne
     Returns:
       Loss tensor of type float.
     """
-    return model_base.loss(pred, target, **kwargs)
+    return model_base.loss(pred, target, predPrev, **kwargs)
 
 def train(loss, globalStep, **kwargs):
     return model_base.train(loss, globalStep, **kwargs)

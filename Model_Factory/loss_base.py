@@ -179,27 +179,30 @@ def _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(targetP, tar
     #smce_loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(logits=targetP, labels=targetT, dim=2), name="loss_smce_sum")
     return smce_loss
 
-def _transformation_loss_nTuple_last(targetP, targetT, activeBatchSize):
+def _transformation_loss_nTuple_last(targetP, targetT, prevPred, nTuple, activeBatchSize):
     '''
     targetP = [activeBatchSize x 12]
     targetT = [activeBatchSize x 12]
     '''
     # 12 transformation matrix
     # Reshape each array to 3x4 and append [0,0,0,1] to each transformation matrix
-    pad = np.array([[0, 0, 0, 1]], dtype=np.float32)
-    pad = np.repeat(pad, activeBatchSize, axis=0)# [activeBatchSize x 4]
-    targetP = tf.reshape(tf.concat([targetP,pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
-    targetT = tf.reshape(tf.concat([targetT,pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
-    # Initialize points : 4 points that don't lie in a plane
-    points = tf.constant([[0,10,0,5],[0,10,10,5],[0,10,0,0],[1,1,1,1]], dtype=tf.float32)
+    pad = tf.reshape( tf.tile( tf.constant([0, 0, 0, 1], dtype=tf.float32), [activeBatchSize]), [activeBatchSize, 4]) # [activeBatchSize x 4]
+    targetP = tf.reshape(tf.concat([tf.reshape(targetP,[activeBatchSize, 12]),pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
+    targetT = tf.reshape(tf.concat([tf.reshape(targetT,[activeBatchSize, 12]),pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
+    prevPred = tf.reshape(tf.concat([tf.reshape(prevPred,[activeBatchSize, 12]),pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
+    # Initialize points : 5 points that don't lie in a plane
+    # [activeBatchSize x 4 x 5]
+    points = tf.reshape( tf.tile( tf.constant([0,1000,0,500, -230, 0, 1000, 100, 500, 33, 0, 1000, 0, 0, 672, 1, 1, 1, 1, 1], dtype=tf.float32), [activeBatchSize]), [activeBatchSize, 4, 5]) 
+    # First get the source to current transformation: pPred x pCurrent
+    targetP = tf.matmul(prevPred, targetP) # [activeBatchSize x 4 x 4] * [activeBatchSize x 4 x 4] = [activeBatchSize x 4 x 4]
     # Transform points based on prediction
-    pPoints = tf.multiply(targetP, points)
+    pPoints = tf.matmul(targetP, points) # [activeBatchSize x 4 x 4] * [activeBatchSize x 4 x 5] = [activeBatchSize x 4 x 5]
     # Transform points based on target
-    tPoints = tf.multiply(targetT, points)
+    tPoints = tf.matmul(targetT, points) # [activeBatchSize x 4 x 4] * [activeBatchSize x 4 x 5] = [activeBatchSize x 4 x 5]
     # Get and return L2 Loss between corresponding points
     return _l2_loss(pPoints, tPoints)
 
-def loss(pred, tval, **kwargs):
+def loss(pred, tval, prevPred, **kwargs):
     """
     Choose the proper loss function and call it.
     """
@@ -220,12 +223,17 @@ def loss(pred, tval, **kwargs):
         if kwargs.get('lastTuple'):
             return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, 1, kwargs.get('activeBatchSize'))
         else:
-            return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+            return _params_classification_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize')) # not complete
     if lossFunction == '_params_classification_gaussian_softmaxCrossentropy_loss_nTuple':
         if kwargs.get('lastTuple'):
             return _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(pred, tval, 1, kwargs.get('activeBatchSize'))
         else:
-            return _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+            return _params_classification_gaussian_softmaxCrossentropy_loss_nTuple(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize')) # not complete
     if lossFunction == '_transformation_loss_nTuple_last':
-        return _transformation_loss_nTuple_last(pred, tval, kwargs.get('numTuple'), kwargs.get('activeBatchSize'))
+        if kwargs.get('lastTuple'):
+            if prevPred is 0:
+                return None
+            return _transformation_loss_nTuple_last(pred, tval, prevPred, 1, kwargs.get('activeBatchSize'))
+        else:
+            return _transformation_loss_nTuple_last(pred, tval, prevPred, kwargs.get('numTuple'), kwargs.get('activeBatchSize')) # not complete
 

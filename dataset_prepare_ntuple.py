@@ -28,7 +28,7 @@ import Data_IO.tfrecord_io as tfrecord_io
 import Data_IO.kitti_shared as kitti
 
 
-seqIDtrain = ['00']#, '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
+seqIDtrain = ['00', '01', '02', '03', '04', '05', '06', '07', '08']#['00', '01', '02', '03', '04', '05', '06', '07', '08']
 seqIDtest = ['09', '10']
 #######################
 NUM_TUPLES = 2
@@ -72,6 +72,19 @@ if WRITE_CLSF:
     for i in range(len(BIN_min)):
         BIN_rng.append(np.append(np.arange(BIN_min[i],BIN_max[i], (BIN_max[i]-BIN_min[i])/BIN_SIZE), [BIN_max[i]], axis=0))
     BIN_rng = np.asarray(BIN_rng, np.float32)
+else:
+    if WRITE_PARAMS:
+        identityMat = np.array([[0, 0, 0, 0, 0, 0]], dtype=np.float32)
+        PRED_PREV = np.ndarray([0,6], dtype=np.float32)
+    else:
+        identityMat = np.array([[1, 0, 0, 0,
+                                 0, 1, 0, 0,
+                                 0, 0, 1, 0]], dtype=np.float32)
+
+        PRED_PREV = np.ndarray([0,12], dtype=np.float32)
+    for i in range(0,NUM_TUPLES-1):
+        PRED_PREV = np.append(PRED_PREV, identityMat, axis=0)
+    PRED_PREV = np.transpose(PRED_PREV)
 
 def image_process_subMean_divStd(img):
     out = img - np.mean(img)
@@ -131,12 +144,14 @@ def odometery_writer(ID,
     imgDepthNumpy = np.asarray(imgDepthList)
     imgDepthNumpy = np.swapaxes(np.swapaxes(imgDepthNumpy,0,1),1,2) # rows_128 x cols_512 x n
     tMatTargetNumpy = np.asarray(tMatTargetList)
-    tMatTargetNumpy = np.swapaxes(tMatTargetNumpy,0,1) # 6D_data x n-1
+    tMatTargetNumpy = np.swapaxes(tMatTargetNumpy,0,1) # (6D_data or 12D_data) x n-1
+    predPrev = PRED_PREV.copy() # (6D_data or 12D_data) x n-1
     filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
     tfrecord_io.tfrecord_writer_ntuple(ID,
                                        pclNumpy,
                                        imgDepthNumpy,
                                        tMatTargetNumpy,
+                                       predPrev,
                                        tfRecFolder,
                                        numTuples,
                                        filename)

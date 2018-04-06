@@ -253,15 +253,17 @@ def parse_example_proto_ntuple(exampleSerialized, **kwargs):
 
         pclRows = 3
         pclCols = 62074
-
-        targetABGXYZ = ntupleX6
+        
+        targetABGXYZ =
+            In parametric model: ntuple x 6 params
+            In transformation model: ntuple x 12 values 
     """
     numTuples = kwargs.get('numTuple')
     featureMap = {
         'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
         'images': tf.FixedLenFeature([], dtype=tf.string),
         'pcl': tf.FixedLenFeature([kwargs.get('pclRows')*kwargs.get('pclCols')*numTuples], dtype=tf.float32),
-        'targetn6': tf.FixedLenFeature([(numTuples-1) * 6], dtype=tf.float32)
+        'target': tf.FixedLenFeature([(numTuples-1) * kwargs.get('logicalOutputSize')], dtype=tf.float32)
         }
     features = tf.parse_single_example(exampleSerialized, featureMap)
     fileID = features['fileID']
@@ -270,7 +272,7 @@ def parse_example_proto_ntuple(exampleSerialized, **kwargs):
                                 kwargs.get('imageDepthCols'),
                                 kwargs.get('imageDepthChannels'))
     pcl = _get_pcl_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
-    target = _get_target_ntuple(features['targetn6'], kwargs.get('logicalOutputSize'), numTuples-1)
+    target = _get_target_ntuple(features['target'], kwargs.get('logicalOutputSize'), numTuples-1)
     # PCLs will hold padded [0, 0, 0, 0] points at the end that will be ignored during usage
     # However, they will be kept to unify matrix col size for valid tensor operations 
     return images, pcl, target, fileID
@@ -303,7 +305,75 @@ def tfrecord_writer_ntuple(fileID, pcl, imgDepth, tMatTarget, tfRecFolder, numTu
         'fileID': _int64_array(fileID),
         'images': _bytes_feature(flatImageList),
         'pcl': _float_nparray(pclList), # 2D np array
-        'targetn6': _float_nparray(tMatTargetList) # 2D np array
+        'target': _float_nparray(tMatTargetList) # 2D np array
+        }))
+    writer.write(example.SerializeToString())
+    writer.close()
+
+def parse_example_proto_ntuple_prevPred(exampleSerialized, **kwargs):
+    """
+    ----------------------------------- FOR predPrev mode (corresponding tf writer has predPrev)
+
+    Converts a dataset to tfrecords
+    fileID = seqID, i, i+1
+    imgDepth => int8 a.k.a. char (numTuple x 128 x 512)
+    tMatTarget => will be converted to float32 with size numTuple x 6
+    pcl => will be converted to float16 with size (numTuple x 3 x PCLCOLS)
+    """
+    numTuples = kwargs.get('numTuple')
+    featureMap = {
+        'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
+        'images': tf.FixedLenFeature([], dtype=tf.string),
+        'pcl': tf.FixedLenFeature([kwargs.get('pclRows')*kwargs.get('pclCols')*numTuples], dtype=tf.float32),
+        'target': tf.FixedLenFeature([(numTuples-1) * kwargs.get('logicalOutputSize')], dtype=tf.float32),
+        'prevPred': tf.FixedLenFeature([(numTuples-1) * kwargs.get('logicalOutputSize')], dtype=tf.float32)
+        }
+    features = tf.parse_single_example(exampleSerialized, featureMap)
+    fileID = features['fileID']
+    images = _decode_byte_image(features['images'],
+                                kwargs.get('imageDepthRows'),
+                                kwargs.get('imageDepthCols'),
+                                kwargs.get('imageDepthChannels'))
+    pcl = _get_pcl_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
+    target = _get_target_ntuple(features['target'], kwargs.get('logicalOutputSize'), numTuples-1)
+    prevPred = _get_target_ntuple(features['prevPred'], kwargs.get('logicalOutputSize'), numTuples-1)
+    # PCLs will hold padded [0, 0, 0, 0] points at the end that will be ignored during usage
+    # However, they will be kept to unify matrix col size for valid tensor operations 
+    return images, pcl, target, prevPred, fileID
+    
+def tfrecord_writer_ntuple(fileID, pcl, imgDepth, tMatTarget, prevPred, tfRecFolder, numTuples, tfFileName):
+    """
+    Converts a dataset to tfrecords
+    fileID = seqID, i, i+1
+    imgDepth => int8 a.k.a. char (numTuple x 128 x 512)
+    tMatTarget => will be converted to float32 with size numTuple x 6
+    pcl => will be converted to float16 with size (numTuple x 3 x PCLCOLS)
+    prevPred => previous prediction values
+    """
+    tfRecordPath = tfRecFolder + tfFileName + ".tfrecords"
+    # Depth Images
+    rows = imgDepth.shape[0]
+    cols = imgDepth.shape[1]
+    flatImage = imgDepth.reshape(rows*cols*numTuples)
+    flatImage = np.asarray(flatImage, np.float32)
+    flatImageList = flatImage.tostring()
+    # Point Clouds
+    pcl = pcl.reshape(pcl.shape[0]*pcl.shape[1]*numTuples) # 3 x PCL_COLS
+    pclList = pcl.tolist()
+    # Target Transformation
+    tMatTarget = tMatTarget.reshape(tMatTarget.shape[0]*(numTuples-1))
+    tMatTargetList = tMatTarget.tolist()
+    # Previous Prediction
+    prevPred = prevPred.reshape(prevPred.shape[0]*(numTuples-1))
+    prevPredList = prevPred.tolist()
+
+    writer = tf.python_io.TFRecordWriter(tfRecordPath)
+    example = tf.train.Example(features=tf.train.Features(feature={
+        'fileID': _int64_array(fileID),
+        'images': _bytes_feature(flatImageList),
+        'pcl': _float_nparray(pclList), # 2D np array
+        'target': _float_nparray(tMatTargetList), # 2D np array
+        'prevPred':_float_nparray(prevPredList)
         }))
     writer.write(example.SerializeToString())
     writer.close()
@@ -341,7 +411,7 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
         'fileID': tf.FixedLenFeature([3], dtype=tf.int64),
         'images': tf.FixedLenFeature([], dtype=tf.string),
         'pcl': tf.FixedLenFeature([kwargs.get('pclRows')*kwargs.get('pclCols')*numTuples], dtype=tf.float32),
-        'targetn6': tf.FixedLenFeature([kwargs.get('logicalOutputSize')*(numTuples-1)], dtype=tf.float32),
+        'target': tf.FixedLenFeature([kwargs.get('logicalOutputSize')*(numTuples-1)], dtype=tf.float32),
         'bitTarget': tf.FixedLenFeature([], dtype=tf.string),
         'rngs': tf.FixedLenFeature([kwargs.get('logicalOutputSize')*(kwargs.get('classificationModel').get('binSize')+1)*(numTuples-1)], dtype=tf.float32)
         }
@@ -356,7 +426,7 @@ def parse_example_proto_ntuple_classification(exampleSerialized, **kwargs):
     # (rows_XYZ x cols_Points x n)
     pcl = _get_ntuple(features['pcl'], kwargs.get('pclRows'), kwargs.get('pclCols'), numTuples)
     # (6D_data x n-1)
-    target = _get_target_ntuple(features['targetn6'], kwargs.get('logicalOutputSize'), numTuples-1)
+    target = _get_target_ntuple(features['target'], kwargs.get('logicalOutputSize'), numTuples-1)
     # (6D_data x bins x n-1)
     bitTarget = _decode_byte_string(features['bitTarget'], kwargs.get('logicalOutputSize'), kwargs.get('classificationModel').get('binSize'), (numTuples-1))
     # (6D_data x bins+1 x n-1)
@@ -400,7 +470,7 @@ def tfrecord_writer_ntuple_classification(fileID, pcl, imgDepth, tMatTarget, bit
         'fileID': _int64_array(fileID),
         'images': _bytes_feature(flatImageList),
         'pcl': _float_nparray(pclList), # 2D np array
-        'targetn6': _float_nparray(tMatTargetList), # 2D np array
+        'target': _float_nparray(tMatTargetList), # 2D np array
         'bitTarget': _bytes_feature(bitTargetList),
         'rngs': _float_nparray(rngList)
         }))
