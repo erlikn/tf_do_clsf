@@ -102,8 +102,69 @@ def image_process_subMean_divStd_n1p1(img):
     return out
 
 def odometery_writer(ID,
+                     imgColorList,
+                     tMatTargetList,
+                     tfRecFolder,
+                     numTuples):
+    '''
+    '''
+    ################### stack color images in the last dimension
+    imgColorNumpy = imgColorList[0]
+    for i in range(1,len(imgColorList)):# stack in 3rd channel
+        imgColorNumpy = np.append(imgColorNumpy, imgColorList[i], axis=2)
+    ###################
+    tMatTargetNumpy = np.asarray(tMatTargetList)
+    tMatTargetNumpy = np.swapaxes(tMatTargetNumpy,0,1) # (6D_data or 12D_data) x n-1
+    predPrev = PRED_PREV.copy() # (6D_data or 12D_data) x n-1
+    filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
+    tfrecord_io.tfrec_writer_nt_colorOnly(ID,
+                                          imgColorNumpy,
+                                          tMatTargetNumpy,
+                                          predPrev,
+                                          tfRecFolder,
+                                          numTuples,
+                                          filename)
+    return
+
+
+def odometery_writer2(ID,
                      pclList,
                      imgDepthList,
+                     imgColorList,
+                     tMatTargetList,
+                     tfRecFolder,
+                     numTuples):
+    '''
+    '''
+    pclNumpy = np.asarray(pclList)
+    pclNumpy = np.swapaxes(np.swapaxes(pclNumpy,0,1),1,2) # rows_XYZ x cols_Points x n
+    ###################
+    imgDepthNumpy = np.asarray(imgDepthList)
+    imgDepthNumpy = np.swapaxes(np.swapaxes(imgDepthNumpy,0,1),1,2) # rows_128 x cols_512 x n
+    ################### stack color images in the last dimension
+    imgColorNumpy = imgColorList[0]
+    for i in range(1,len(imgColorList)):# stack in 3rd channel
+        imgColorNumpy = np.append(imgColorNumpy, imgColorList[i], axis=2)
+    ###################
+    tMatTargetNumpy = np.asarray(tMatTargetList)
+    tMatTargetNumpy = np.swapaxes(tMatTargetNumpy,0,1) # (6D_data or 12D_data) x n-1
+    predPrev = PRED_PREV.copy() # (6D_data or 12D_data) x n-1
+    filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
+    tfrecord_io.tfrecord_writer_ntuple(ID,
+                                       pclNumpy,
+                                       imgDepthNumpy,
+                                       imgColorNumpy,
+                                       tMatTargetNumpy,
+                                       predPrev,
+                                       tfRecFolder,
+                                       numTuples,
+                                       filename)
+    return
+
+def odometery_writer3(ID,
+                     pclList,
+                     imgDepthList,
+                     imgColorList,
                      tMatTargetList,
                      bitTargetList,
                      tfRecFolder,
@@ -114,6 +175,10 @@ def odometery_writer(ID,
     pclNumpy = np.swapaxes(np.swapaxes(pclNumpy,0,1),1,2) # rows_XYZ x cols_Points x n
     imgDepthNumpy = np.asarray(imgDepthList)
     imgDepthNumpy = np.swapaxes(np.swapaxes(imgDepthNumpy,0,1),1,2) # rows_128 x cols_512 x n
+    ################### stack color images in the last dimension
+    imgColorNumpy = np.asarray(imgColorList)
+    imgColorNumpy = np.swapaxes(np.swapaxes(imgDepthNumpy,0,1),1,2) # rows_ x cols_ x (3xn)
+    ###################
     tMatTargetNumpy = np.asarray(tMatTargetList)
     tMatTargetNumpy = np.swapaxes(tMatTargetNumpy,0,1) # 6D_data x n-1
     bitTargetNumpy = np.asarray(bitTargetList)
@@ -127,6 +192,7 @@ def odometery_writer(ID,
     tfrecord_io.tfrecord_writer_ntuple_classification(ID,
                                                       pclNumpy,
                                                       imgDepthNumpy,
+                                                      imgColorNumpy,
                                                       tMatTargetNumpy,
                                                       bitTargetNumpy,
                                                       rngNumpy,
@@ -135,31 +201,6 @@ def odometery_writer(ID,
                                                       filename)
     return
 
-def odometery_writer(ID,
-                     pclList,
-                     imgDepthList,
-                     tMatTargetList,
-                     tfRecFolder,
-                     numTuples):
-    '''
-    '''
-    pclNumpy = np.asarray(pclList)
-    pclNumpy = np.swapaxes(np.swapaxes(pclNumpy,0,1),1,2) # rows_XYZ x cols_Points x n
-    imgDepthNumpy = np.asarray(imgDepthList)
-    imgDepthNumpy = np.swapaxes(np.swapaxes(imgDepthNumpy,0,1),1,2) # rows_128 x cols_512 x n
-    tMatTargetNumpy = np.asarray(tMatTargetList)
-    tMatTargetNumpy = np.swapaxes(tMatTargetNumpy,0,1) # (6D_data or 12D_data) x n-1
-    predPrev = PRED_PREV.copy() # (6D_data or 12D_data) x n-1
-    filename = str(ID[0]) + "_" + str(ID[1]) + "_" + str(ID[2])
-    tfrecord_io.tfrecord_writer_ntuple(ID,
-                                       pclNumpy,
-                                       imgDepthNumpy,
-                                       tMatTargetNumpy,
-                                       predPrev,
-                                       tfRecFolder,
-                                       numTuples,
-                                       filename)
-    return
 ##################################
 def _zero_pad(xyzi, num):
     '''
@@ -299,7 +340,6 @@ def _make_image(depthview, rXYZ):
             depthImage[yidx+1, xidx] = depthview[2, idxs[i]]
         else:
             depthImage[yidx, xidx] = depthview[2, idxs[i]]
-
     return depthImage
 
 def get_depth_image_pano_pclView(xyzi, height=1.6):
@@ -370,7 +410,7 @@ def _get_tMat_B_2_A(tMatA2o, tMatB2o):
     tMatB2A = np.matmul(np.linalg.inv(tMatA2o), tMatB2o)
     tMatB2A = np.delete(tMatB2A, tMatB2A.shape[0]-1, 0)
     return tMatB2A
-
+370, 1226
 def _get_tMat_B_2_O(tMatA2o, tMatA2B):
     '''
     tMatA2o A -> O (target pcl will be in O), tMatA2B A -> B (source pcl is in B)
@@ -421,7 +461,12 @@ def _get_pcl_XYZ(filePath):
     xyzi = np.array(pclpoints, dtype=np.float32)
     return xyzi.transpose()
 
-def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder,  numTuples, i):
+def process_dataset(startTime, durationSum, 
+                    pclFolderList, imgFolderList, 
+                    seqIDs, 
+                    pclFilenamesList, imgFilenamesList, poseFileList, 
+                    tfRecFolder,  
+                    numTuples, i):
     '''
     pclFilenames: list of pcl file addresses
     poseFile: includes a list of pose files to read
@@ -438,12 +483,11 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
     seqID = seqIDs[i]
     print("SeqID started : ", seqID)
 
-    pclFolder = pclFolderList[i]
-    pclFilenames = pclFilenamesList[i]
+    imgFolder = imgFolderList[i]
+    imgFilenames = imgFilenamesList[i]
     poseFile = poseFileList[i]
 
-    xyziList = list()
-    imgDepthList = list()
+    imgColorList = list()
     poseB2AList = list()
     bitB2AList = list()
     poseX20List = list()
@@ -451,18 +495,18 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
     # j is the begining of the list
     # k is the end of the list
     k = -1
-    for j in range(0, len(pclFilenames)-(numTuples-1)):
+    for j in range(0, len(imgFilenames)-(numTuples-1)):
         if j%100==0:
-            print("Sequence ",i,"  Progress ",j,"/",len(pclFilenames)-(numTuples-1))
+            print("Sequence ",i,"  Progress ",j,"/",len(imgFilenames)-(numTuples-1))
         # if there are less numTuples in the list, fill the list
         # numTuples is at least 2
-        while (len(xyziList)<numTuples): # or could be said (k-j < numTuples-1)
+        while (len(imgColorList)<numTuples): # or could be said (k-j < numTuples-1)
             k+=1 # k starts at -1
-            xyzi = _get_pcl_XYZ(pclFolder + pclFilenames[k])
-            imgDepth, xyzi = get_depth_image_pano_pclView(xyzi)
+            imgColor = cv2.imread(imgFolder+imgFilenames[k])
+
             poseX20List.append(_get_3x4_tmat(poseFile[k])) # k is always one step ahead of nPose, and same step as nPCL
-            xyziList.append(xyzi)
-            imgDepthList.append(imgDepth)
+            imgColorList.append(imgColor)
+
             if k == 0:
                 continue # only one PCL and Pose are read
                 # makes sure first & second pcl and pose are read to have full transformation
@@ -485,8 +529,7 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
             fileID = [100+int(seqID), 100000+j, 100000+(k)] # k=j+(numTuples-1)
             if WRITE_CLSF:
                 odometery_writer(fileID,# 3 ints
-                                 xyziList,# ntuplex3xPCL_COLS
-                                 imgDepthList,# ntuplex128x512
+                                 imgColorList,# ntuplexRRRxCCC
                                  poseB2AList,# (ntuple-1)x(6 or 12)
                                  bitB2AList,# (ntuple-1)x6xBIN_SIZE
                                  tfRecFolder,
@@ -495,14 +538,102 @@ def process_dataset(startTime, durationSum, pclFolderList, seqIDs, pclFilenamesL
                 bitB2AList.pop(0)
             else:
                 odometery_writer(fileID,# 3 ints
-                                 xyziList,# ntuplex3xPCL_COLS
-                                 imgDepthList,# ntuplex128x512
+                                 imgColorList,# ntuplexRRRxCCC
                                  poseB2AList,# (ntuple-1)x(6 or 12)
                                  tfRecFolder,
                                  numTuples) 
             # Oldest smaple is to be forgotten
-            xyziList.pop(0)
-            imgDepthList.pop(0)
+            imgColorList.pop(0)
+            poseB2AList.pop(0)
+            poseX20List.pop(0)
+        
+    print("SeqID completed : ", seqID)
+    return
+
+def process_dataset_colorOnly(startTime, durationSum, 
+                    pclFolderList, imgFolderList, 
+                    seqIDs, 
+                    pclFilenamesList, imgFilenamesList, poseFileList, 
+                    tfRecFolder,  
+                    numTuples, i):
+    '''
+    pclFilenames: list of pcl file addresses
+    poseFile: includes a list of pose files to read
+    point cloud is moved to i+1'th frame:
+        tMatAo (i): A->0
+        tMatBo (i+1): B->0
+        tMatAB (target): A->B  (i -> i+1) 
+   ID '''
+    '''
+    Calculate the Yaw, Pitch, Roll from Rotation Matrix
+    and extraxt dX, dY, dZ
+    use them to train the network
+    '''
+    seqID = seqIDs[i]
+    print("SeqID started : ", seqID)
+
+    imgFolder = imgFolderList[i]
+    imgFilenames = imgFilenamesList[i]
+    poseFile = poseFileList[i]
+
+    imgColorList = list()
+    poseB2AList = list()
+    bitB2AList = list()
+    poseX20List = list()
+    # pop the first in Tuples and append last as numTuple
+    # j is the begining of the list
+    # k is the end of the list
+    k = -1
+    for j in range(0, len(imgFilenames)-(numTuples-1)):
+        if j%100==0:
+            print("Sequence ",i,"  Progress ",j,"/",len(imgFilenames)-(numTuples-1))
+        # if there are less numTuples in the list, fill the list
+        # numTuples is at least 2
+        while (len(imgColorList)<numTuples): # or could be said (k-j < numTuples-1)
+            k+=1 # k starts at -1
+            imgColor = cv2.imread(imgFolder+imgFilenames[k])
+            imgColor = cv2.resize(imgColor, (370, 1226) )
+            imgColor = cv2.resize(imgColor, (int(imgColor.shape[0]/4), int(imgColor.shape[1]/4)) )
+            poseX20List.append(_get_3x4_tmat(poseFile[k])) # k is always one step ahead of nPose, and same step as nPCL
+            imgColorList.append(imgColor)
+
+            if k == 0:
+                continue # only one PCL and Pose are read
+                # makes sure first & second pcl and pose are read to have full transformation
+            # get target pose  B->A also changes to abgxyz : get abgxyzb-abgxyza
+            pose_B2A = _get_tMat_B_2_A(poseX20List[(k-j)-1], poseX20List[(k-j)]) # Use last two
+            if WRITE_PARAMS:
+                # 6-D parameters
+                abgxyzB2A = kitti._get_params_from_tmat(pose_B2A)
+            else:
+                # Transformation matrix 12 values
+                abgxyzB2A = pose_B2A
+            if WRITE_CLSF:
+                bit = kitti.get_multi_bit_target(abgxyzB2A, BIN_rng, BIN_SIZE)
+                bitB2AList.append(bit)
+                
+            poseB2AList.append(abgxyzB2A.reshape(-1))
+            
+        else:
+            # numTuples are read and ready to be dumped on permanent memory
+            fileID = [100+int(seqID), 100000+j, 100000+(k)] # k=j+(numTuples-1)
+            if WRITE_CLSF:
+                odometery_writer(fileID,# 3 ints
+                                 imgColorList,# ntuplexRRRxCCC
+                                 poseB2AList,# (ntuple-1)x(6 or 12)
+                                 bitB2AList,# (ntuple-1)x6xBIN_SIZE
+                                 tfRecFolder,
+                                 numTuples)
+                # Oldest smaple is to be forgotten
+                bitB2AList.pop(0)
+            else:
+                odometery_writer(fileID,# 3 ints
+                                 imgColorList,# ntuplexRRRxCCC
+                                 poseB2AList,# (ntuple-1)x(6 or 12)
+                                 tfRecFolder,
+                                 numTuples) 
+            # Oldest smaple is to be forgotten
+            imgColorList.pop(0)
             poseB2AList.pop(0)
             poseX20List.pop(0)
         
@@ -513,19 +644,28 @@ def _get_pose_data(posePath):
     return np.loadtxt(open(posePath, "r"), delimiter=" ")
 def _get_pcl_folder(pclFolder, seqID):
     return pclFolder + seqID + '/' + 'velodyne/'
+def _get_img_folder(imgFolder, seqID):
+    return imgFolder + seqID + '/' + 'image_2/'
 def _get_pose_path(poseFolder, seqID):
     return poseFolder + seqID + ".txt"
-def _get_file_names(readFolder):
-    filenames = [f for f in listdir(readFolder) if (isfile(join(readFolder, f)) and "bin" in f)]
+def _get_file_names(readFolder, filetype):
+    if filetype == 'pcl':
+        fileformat = 'bin'
+    elif filetype == 'img':
+        fileformat = 'png'
+    filenames = [f for f in listdir(readFolder) if (isfile(join(readFolder, f)) and fileformat in f)]
     filenames.sort()
     return filenames
 
-def prepare_dataset(datasetType, pclFolder, poseFolder, seqIDs, tfRecFolder, numTuples=1):
+def prepare_dataset(datasetType, pclFolder, poseFolder, imgFolder, seqIDs, tfRecFolder, numTuples=1):
     durationSum = 0
     # make a list for each sequence
     pclFolderPathList = list()
     pclFilenamesList = list()
     poseFileList = list()
+    imgFolderPathList = list()
+    imgFilenamesList = list() 
+    
     print("Arranging filenames")
     for i in range(len(seqIDs)):
         posePath = _get_pose_path(poseFolder, seqIDs[i])
@@ -533,18 +673,32 @@ def prepare_dataset(datasetType, pclFolder, poseFolder, seqIDs, tfRecFolder, num
         #print(posePath)
 
         pclFolderPath = _get_pcl_folder(pclFolder, seqIDs[i])
-        pclFilenames = _get_file_names(pclFolderPath)
+        pclFilenames = _get_file_names(pclFolderPath, 'pcl')
+
+        imgFolderPath = _get_img_folder(imgFolder, seqIDs[i])
+        imgFilenames = _get_file_names(imgFolderPath, 'img')
         
         poseFileList.append(poseFile)
         pclFolderPathList.append(pclFolderPath)
         pclFilenamesList.append(pclFilenames)
-    
+        imgFolderPathList.append(imgFolderPath)
+        imgFilenamesList.append(imgFilenames)
+
     print("Starting datawrite")
     startTime = time.time()
-    num_cores = multiprocessing.cpu_count() - 2
+    num_cores = multiprocessing.cpu_count() - 1
     #for j in range(0, len(seqIDs)):
-    #    process_dataset(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j)
-    Parallel(n_jobs=num_cores)(delayed(process_dataset)(startTime, durationSum, pclFolderPathList, seqIDs, pclFilenamesList, poseFileList, tfRecFolder, numTuples, j) for j in range(0,len(seqIDs)))
+    #    process_dataset_colorOnly(startTime, durationSum, pclFolderPathList, imgFolderPathList,
+    #                    seqIDs, 
+    #                    pclFilenamesList, imgFilenamesList, poseFileList, 
+    #                    tfRecFolder,
+    #                    numTuples, j)
+    Parallel(n_jobs=num_cores)(delayed(process_dataset_colorOnly)(startTime, durationSum,
+                                                        pclFolderPathList, imgFolderPathList,
+                                                        seqIDs, 
+                                                        pclFilenamesList, imgFilenamesList, poseFileList,
+                                                        tfRecFolder,
+                                                        numTuples, j) for j in range(0,len(seqIDs)))
     print('Done')
 
 ############# PATHS
@@ -555,24 +709,25 @@ def _set_folders(folderPath):
 
 pclPath = '../Data/kitti/pointcloud/'
 posePath = '../Data/kitti/poses/'
+imgPath = '../Data/kitti/imagecolor/'
 
 if NUM_TUPLES==2 or NUM_TUPLES==5:
     if WRITE_CLSF:
         #traintfRecordFLD = "../Data/kitti/train_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
         #testtfRecordFLD = "../Data/kitti/test_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
-        traintfRecordFLD = "../Data/kitti/train_64h_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
-        testtfRecordFLD = "../Data/kitti/test_64h_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+        traintfRecordFLD = "../Data/kitti/train_color_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
+        testtfRecordFLD = "../Data/kitti/test_color_clsf_"+str(NUM_TUPLES)+"_tpl_"+str(BIN_SIZE)+"_bin/"
     else:
         if WRITE_PARAMS:
             #traintfRecordFLD = "../Data/kitti/train_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
             #testtfRecordFLD = "../Data/kitti/test_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
-            traintfRecordFLD = "../Data/kitti/train_64h_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
-            testtfRecordFLD = "../Data/kitti/test_64h_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
+            traintfRecordFLD = "../Data/kitti/train_color_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
+            testtfRecordFLD = "../Data/kitti/test_color_reg_"+str(NUM_TUPLES)+"_tpl_6_prm/"
         else:
             #traintfRecordFLD = "../Data/kitti/train_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
             #testtfRecordFLD = "../Data/kitti/test_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
-            traintfRecordFLD = "../Data/kitti/train_64h_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
-            testtfRecordFLD = "../Data/kitti/test_64h_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
+            traintfRecordFLD = "../Data/kitti/train_color_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
+            testtfRecordFLD = "../Data/kitti/test_color_reg_"+str(NUM_TUPLES)+"_tpl_12_prm/"
  
 else:
     print("Folders for Num Tuples = ", NUM_TUPLES, "doesn't exist!!! (invalid option)")
@@ -614,5 +769,5 @@ if input("(Overwrite WARNING) Is the Num Tuples set to correct value? (y) ") != 
 _set_folders(traintfRecordFLD)
 _set_folders(testtfRecordFLD)
 
-prepare_dataset("train", pclPath, posePath, seqIDtrain, traintfRecordFLD, numTuples=NUM_TUPLES)
-prepare_dataset("test", pclPath, posePath, seqIDtest, testtfRecordFLD, numTuples=NUM_TUPLES)
+prepare_dataset("train", pclPath, posePath, imgPath, seqIDtrain, traintfRecordFLD, numTuples=NUM_TUPLES)
+prepare_dataset("test", pclPath, posePath, imgPath, seqIDtest, testtfRecordFLD, numTuples=NUM_TUPLES)

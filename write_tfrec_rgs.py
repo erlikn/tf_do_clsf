@@ -117,11 +117,18 @@ def train(modelParams):
         else:
             print('Setting up   Regression model...')
             # Build input pipeline: Get images and transformation for model_cnn.
-            images, pcl, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
+            if modelParams.get('morph')['model']=='color':
+                imagesColor, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
+            else:
+                images, pcl, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
             print('Input        ready')
             # Build a Graph
             # inference model
-            targetP = model_cnn.inference(images, **modelParams)
+            if modelParams.get('morph')['model']=='color':
+                targetP = model_cnn.inference(imagesColor, **modelParams)
+            else:
+                targetP = model_cnn.inference(images, **modelParams)
+
             print('Graph        ready')
             if modelParams.get('lastTuple'):
                 # Training with all, loss on the last tuple only
@@ -188,7 +195,10 @@ def train(modelParams):
                 if modelParams.get('classificationModel'):
                     evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, bitTarget, bitTargetP, rngs, tfrecFileIDs, loss])
                 else:
-                    evImages, evPcl, evtargetT, evtargetP, evPrevPred, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, targetP, prevP, tfrecFileIDs, loss])
+                    if modelParams.get('morph')['model']=='color':
+                        evImagesColor, evtargetT, evtargetP, evPrevPred, evtfrecFileIDs, evlossValue = sess.run([imagesColor, targetT, targetP, prevP, tfrecFileIDs, loss])
+                    else:
+                        evImages, evPcl, evtargetT, evtargetP, evPrevPred, evtfrecFileIDs, evlossValue = sess.run([images, pcl, targetT, targetP, prevP, tfrecFileIDs, loss])
                 ########################################################### EVALUATE MODEL >
                 for fileIdx in range(modelParams.get('activeBatchSize')):
                     fileIDname = str(evtfrecFileIDs[fileIdx][0]) + "_" + str(evtfrecFileIDs[fileIdx][1]) + "_" + str(evtfrecFileIDs[fileIdx][2])
@@ -200,10 +210,12 @@ def train(modelParams):
                 if modelParams.get('classificationModel'):
                     data_output.output_clsf(evImages, evPcl, evtargetT, evBitTargetT, evbitTargetP, evRngs, evtfrecFileIDs, **modelParams)
                 else:
-                    if modelParams.get('morph')['model']=='depth': # depth or both
+                    if modelParams.get('morph')['model']=='depth': # depth or color or pcl
                         data_output.output_rgs(evImages, evPcl, evtargetT, evtargetP, evPrevPred, evtfrecFileIDs, **modelParams)
+                    elif modelParams.get('morph')['model']=='color': # depth or color or pcl
+                        data_output.output_rgs_colorOnly(evImagesColor, evtargetT, evtargetP, evPrevPred, evtfrecFileIDs, **modelParams)
                     else:
-                        data_output.output_rgs(evImages, evPcl, evtargetT, evtargetP, 0, evtfrecFileIDs, **modelParams)    
+                        data_output.output_rgs(evImages, evPcl, evtargetT, evtargetP, 0, evtfrecFileIDs, **modelParams)      
                 ########################################################### WRITE OUTPUT >
                 duration = time.time() - startTime
                 durationSum += duration

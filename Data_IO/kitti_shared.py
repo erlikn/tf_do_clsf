@@ -391,3 +391,17 @@ def get_params_from_binarylogits(binPreds, ranges):
             # rngs 0-33, argmax 0-32 => always choses lower one, is this matching with kitti shared extended?????
             params[parID, 0, tupID] = ranges[parID, argmax[parID, tupID], tupID]
     return params
+
+
+
+def transform_image(img, tmat):
+    '''
+    Inputs:
+        img: input image
+        tmat: transformation matrix 3x4
+    Returns:
+        transformed image (warped image)
+    '''
+    tmat = _add_row4_tmat(tmat)
+    img = cv2.warpPerspective(img, tmat, (img.shape[1], img.shape[0]))
+    return img

@@ -134,12 +134,24 @@ def write_iterative(runName, itrNum):
         itr_180111_ITR_B_clsf_long_glsmcel2(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, dataLocal)
     ####
     elif runName == '180402_ITR_B_4_reg_lastTup': # using 171003_ITR_B but with transformation loss
-        dataLocal['morph'] = {'model': 'depth'} # depth or both
+        dataLocal['mtest_64h_reg_orph'] = {'model': 'depth'} # depth, color, pcl
         itr_180402_ITR_B_reg_trnsfLoss(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, dataLocal)
     ####
     elif runName == '180406_ITR_B_4_reg_lastTup': # using 171003_ITR_B but with transformation loss
-        dataLocal['morph'] = {'model': 'depth'} # depth or both
+        dataLocal['morph'] = {'model': 'depth'} # depth, color, pcl
         itr_180402_ITR_B_reg_trnsfLoss(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, dataLocal)
+    ####
+    elif runName == '180504_ITR_B_4_reg_fsiam': # using 171003_ITR_B but with transformation loss
+        dataLocal['morph'] = {'model': 'depth'} # depth, color, pcl
+        itr_180504_ITR_B_4_reg_fsiam(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, dataLocal)
+    ####
+    elif runName == '180507_ITR_B_img_reg_fsiam_tmat': # using 171003_ITR_B but with transformation loss
+        dataLocal['morph'] = {'model': 'color'} # depth, color, pcl
+        itr_180507_ITR_B_img_reg_fsiam_tmat(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, dataLocal)
+    ####
+    elif runName == '180507_ITR_B_img_reg_fsiam_params': # using 171003_ITR_B but with transformation loss
+        dataLocal['morph'] = {'model': 'color'} # depth, color, pcl 
+        itr_180507_ITR_B_img_reg_fsiam_params(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, dataLocal)
     ####
     else:
         print("--error: Model name not found!")
@@ -444,6 +456,180 @@ def itr_180402_ITR_B_reg_trnsfLoss(reCompileITR, trainClsfLogDirBase, testClsfLo
         if itrNum == 1:
             data['trainDataDir'] = '../Data/kitti/train_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
             data['testDataDir'] = '../Data/kitti/test_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
+        ### Auto Iteration Number 2,3,4
+        if itrNum > 1:
+            data['trainDataDir'] = '../Data/kitti/train_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = '../Data/kitti/test_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+        ####
+        data['trainLogDir'] = trainRegLogDirBase + runName
+        data['testLogDir'] = testRegLogDirBase + runName
+        data['warpedTrainDataDir'] = '../Data/kitti/train_itr_'+str(data['numTuple'])+'_tpl/' + runName
+        data['warpedTestDataDir'] = '../Data/kitti/test_itr_'+str(data['numTuple'])+'_tpl/'+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['tMatTrainDir'] = data['trainLogDir']+'/target'
+        data['tMatTestDir'] = data['testLogDir']+'/target'
+        _set_folders(data['tMatTrainDir'])
+        _set_folders(data['tMatTestDir'])
+        data['warpOriginalImage'] = True
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+    
+def itr_180504_ITR_B_4_reg_fsiam(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, data):
+    if reCompileITR:
+        runPrefix = runName+'_'
+        data['modelName'] = 'twin_cnn_8p1fp1f'
+        data['numParallelModules'] = 2
+        data['imageDepthChannels'] = 2
+        data['numTuple'] = 2
+        data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
+        #                     p0, p1, p2, p3,  p4,  p5,  p6,  p7,  pf0 
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        # ^ all the way parallel -> parallel fully connecteds are concatenated and connected to output layer
+        data['trainBatchSize'] = 16
+        data['testBatchSize'] = 16
+        data['numTrainDatasetExamples'] = 20400
+        data['numTestDatasetExamples'] = 2790
+        data['logicalOutputSize'] = 12 # 12 for transformation matrix  -  6 for transformation parameters
+        data['lastTuple'] = True
+
+        # For all tuples
+        if data['lastTuple']:
+            data['networkOutputSize'] = data['logicalOutputSize']
+        else:
+            data['networkOutputSize'] = data['logicalOutputSize']*(data['numTuple']-1)
+        data['lossFunction'] = "_transformation_loss_nTuple_last"
+        
+        ## runs
+        data['trainMaxSteps'] = 75000
+        data['numEpochsPerDecay'] = float(data['trainMaxSteps']/3)
+
+        runName = runPrefix+str(itrNum)
+        ### Auto Iteration Number
+        if itrNum == 1:
+            data['trainDataDir'] = '../Data/kitti/train_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
+            data['testDataDir'] = '../Data/kitti/test_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
+        ### Auto Iteration Number 2,3,4
+        if itrNum > 1:
+            data['trainDataDir'] = '../Data/kitti/train_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = '../Data/kitti/test_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+        ####
+        data['trainLogDir'] = trainRegLogDirBase + runName
+        data['testLogDir'] = testRegLogDirBase + runName
+        data['warpedTrainDataDir'] = '../Data/kitti/train_itr_'+str(data['numTuple'])+'_tpl/' + runName
+        data['warpedTestDataDir'] = '../Data/kitti/test_itr_'+str(data['numTuple'])+'_tpl/'+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['tMatTrainDir'] = data['trainLogDir']+'/target'
+        data['tMatTestDir'] = data['testLogDir']+'/target'
+        _set_folders(data['tMatTrainDir'])
+        _set_folders(data['tMatTestDir'])
+        data['warpOriginalImage'] = True
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+
+def itr_180507_ITR_B_img_reg_fsiam_tmat(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, data):
+    if reCompileITR:
+        runPrefix = runName+'_'
+        data['modelName'] = 'twin_cnn_8p1fp1f_sct'
+        data['numParallelModules'] = 2
+        data['numTuple'] = 2
+        data['imageDepthRows'] = 64
+        data['imageDepthCols'] = 512
+        data['imageDepthChannels'] = 2 # 2 x (depth=1)
+        data['imageColorRows'] = 92
+        data['imageColorCols'] = 306
+        data['imageColorChannels'] = 3*data['numTuple'] # 2 x (depth=3)
+        
+        data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
+        #                     p0, p1, p2, p3,  p4,  p5,  p6,  p7,  pf0 
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        # ^ all the way parallel -> parallel fully connecteds are concatenated and connected to output layer
+        data['trainBatchSize'] = 16
+        data['testBatchSize'] =  16
+        data['numTrainDatasetExamples'] = 20400
+        data['numTestDatasetExamples'] = 2790
+        data['logicalOutputSize'] = 12 # 12 for transformation matrix  -  6 for transformation parameters
+        data['lastTuple'] = True
+
+        # For all tuples
+        if data['lastTuple']:
+            data['networkOutputSize'] = data['logicalOutputSize']
+        else:
+            data['networkOutputSize'] = data['logicalOutputSize']*(data['numTuple']-1)
+        data['lossFunction'] = "_transformation_loss_nTuple_last"
+        
+        ## runs
+        data['trainMaxSteps'] = 75000
+        data['numEpochsPerDecay'] = float(data['trainMaxSteps']/3)
+
+        runName = runPrefix+str(itrNum)
+        ### Auto Iteration Number
+        if itrNum == 1:
+            data['trainDataDir'] = '../Data/kitti/train_color_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
+            data['testDataDir'] = '../Data/kitti/test_color_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
+        ### Auto Iteration Number 2,3,4
+        if itrNum > 1:
+            data['trainDataDir'] = '../Data/kitti/train_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+            data['testDataDir'] = '../Data/kitti/test_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration
+        ####
+        data['trainLogDir'] = trainRegLogDirBase + runName
+        data['testLogDir'] = testRegLogDirBase + runName
+        data['warpedTrainDataDir'] = '../Data/kitti/train_itr_'+str(data['numTuple'])+'_tpl/' + runName
+        data['warpedTestDataDir'] = '../Data/kitti/test_itr_'+str(data['numTuple'])+'_tpl/'+ runName
+        _set_folders(data['warpedTrainDataDir'])
+        _set_folders(data['warpedTestDataDir'])
+        data['tMatTrainDir'] = data['trainLogDir']+'/target'
+        data['tMatTestDir'] = data['testLogDir']+'/target'
+        _set_folders(data['tMatTrainDir'])
+        _set_folders(data['tMatTestDir'])
+        data['warpOriginalImage'] = True
+        data['batchNorm'] = True
+        data['weightNorm'] = False
+        write_json_file(runName+'.json', data)
+    
+def itr_180507_ITR_B_img_reg_fsiam_params(reCompileITR, trainClsfLogDirBase, testClsfLogDirBase, runName, itrNum, data):
+    if reCompileITR:
+        runPrefix = runName+'_'
+        data['modelName'] = 'twin_cnn_8p1fp1f_sct'
+        data['numParallelModules'] = 2
+        data['numTuple'] = 2
+        data['imageDepthRows'] = 64
+        data['imageDepthCols'] = 512
+        data['imageDepthChannels'] = 2 # 2 x (depth=1)
+        data['imageColorRows'] = 92#370
+        data['imageColorCols'] = 306#1226
+        data['imageColorChannels'] = 3*data['numTuple'] # 2 x (depth=3)
+        
+        data['optimizer'] = 'MomentumOptimizer' # AdamOptimizer MomentumOptimizer GradientDescentOptimizer
+        #                     p0, p1, p2, p3,  p4,  p5,  p6,  p7,  pf0 
+        data['modelShape'] = [64, 64, 64, 64, 128, 128, 128, 128, 1024]
+        # ^ all the way parallel -> parallel fully connecteds are concatenated and connected to output layer
+        data['trainBatchSize'] = 16
+        data['testBatchSize'] =  16
+        data['numTrainDatasetExamples'] = 20400
+        data['numTestDatasetExamples'] = 2790
+        data['logicalOutputSize'] = 6 # 12 for transformation matrix  -  6 for transformation parameters
+        data['lastTuple'] = True
+
+        # For all tuples
+        if data['lastTuple']:
+            data['networkOutputSize'] = data['logicalOutputSize']
+        else:
+            data['networkOutputSize'] = data['logicalOutputSize']*(data['numTuple']-1)
+        data['lossFunction'] = "_params_transformation_loss_nTuple_last"
+        
+        ## runs
+        data['trainMaxSteps'] = 75000
+        data['numEpochsPerDecay'] = float(data['trainMaxSteps']/3)
+
+        runName = runPrefix+str(itrNum)
+        ### Auto Iteration Number
+        if itrNum == 1:
+            data['trainDataDir'] = '../Data/kitti/train_color_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
+            data['testDataDir'] = '../Data/kitti/test_color_reg_'+str(data['numTuple'])+'_tpl_'+str(data['logicalOutputSize'])+'_prm'
         ### Auto Iteration Number 2,3,4
         if itrNum > 1:
             data['trainDataDir'] = '../Data/kitti/train_itr_'+str(data['numTuple'])+'_tpl/' + runPrefix+str(itrNum-1) # from previous iteration

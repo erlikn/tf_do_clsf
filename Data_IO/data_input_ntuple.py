@@ -72,6 +72,36 @@ tf.app.flags.DEFINE_integer('inputQueueMemoryFactor', 2,
                             """4, 2 or 1, if host memory is constrained. See """
                             """comments in code for more details.""")
 
+def image_processing(image):
+    """
+        Reads all dataset and normalize images
+        
+        Each image is re-written as imageChannel-(meanChannelDataset) / stddev(channelDataset) normalized to [-1,1]
+    """
+    meanChannels, stdChannels = tf.nn.moments(image, axes=[0, 1]) # rowxcolx6 => [meanChannel1 meanChannel2]
+    # SUBTRACT MEAN
+    meanChannels = tf.reshape(meanChannels, [1,1,-1]) # prepare for channel based subtraction
+    imagenorm = tf.subtract(image, meanChannels)
+    # DIVIDE BY STANDARD DEVIATION
+    stdChannels = tf.reshape(stdChannels, [1,1,-1]) # prepare for channel based scalar division
+    stdChannels = tf.cond(tf.reduce_all(tf.not_equal(stdChannels,tf.zeros_like(stdChannels))),
+                          lambda: stdChannels,
+                          lambda: tf.ones_like(stdChannels))
+    imagenorm = tf.div(imagenorm, stdChannels)
+    # SCALE TO [-1,1]
+    maxChannels = tf.reduce_max(imagenorm, [0,1])
+    minChannels = tf.reduce_min(imagenorm, [0,1])
+    maxminDif = tf.subtract(maxChannels, minChannels)
+    maxminSum = tf.add(maxChannels, minChannels)
+    maxminDif = tf.reshape(maxminDif, [1,1,-1])
+    maxminSum = tf.reshape(maxminSum, [1,1,-1])
+    coef = tf.constant(2.0, shape=[1,1,2])
+    maxminDif = tf.cond(tf.reduce_all(tf.not_equal(maxminDif,tf.zeros_like(maxminDif))),
+                                      lambda: maxminDif, 
+                                      lambda: tf.ones_like(maxminDif))
+    imagenorm = tf.div(tf.subtract(tf.multiply(coef,imagenorm), maxminSum), maxminDif) # ((2*x)-(max+min))/(max-min)
+    return imagenorm
+
 def validate_for_nan(tensorT):
     # Input:
     #   Tensor
@@ -134,15 +164,27 @@ def fetch_reg(numPreprocessThreads, exampleSerialized, sampleData, **kwargs):
     """
     for _ in range(numPreprocessThreads):
         # Parse a serialized Example proto to extract the image and metadata.
-        images, pcl, target, prevPred, tfrecFileIDs = tfrecord_io.parse_example_proto_ntuple_prevPred(exampleSerialized, **kwargs)
-        sampleData.append([images, pcl, target, prevPred, tfrecFileIDs])
-        
-    batchImages, batchPcl, batchTarget, batchPrevPred, batchTFrecFileIDs = tf.train.batch_join(sampleData,
+        if kwargs.get('morph')['model']=='color':
+            imagesColor, target, prevPred, tfrecFileIDs = tfrecord_io.parse_exp_proto_nt_prevPred_colorOnly(exampleSerialized, **kwargs)
+            imagesColor = image_processing(imagesColor)
+            sampleData.append([imagesColor, target, prevPred, tfrecFileIDs])
+        else:
+            images, pcl, target, prevPred, tfrecFileIDs = tfrecord_io.parse_example_proto_ntuple_prevPred(exampleSerialized, **kwargs)
+            sampleData.append([images, pcl, target, prevPred, tfrecFileIDs])
+
+    if kwargs.get('morph')['model']=='color':
+        batchImagesColor, batchTarget, batchPrevPred, batchTFrecFileIDs = tf.train.batch_join(sampleData,
                                                                             batch_size=kwargs.get('activeBatchSize'),
                                                                             capacity=2*numPreprocessThreads*kwargs.get('activeBatchSize'))
-    # Display the training images in the visualizer.
-    images = tf.split(batchImages, kwargs.get('imageDepthChannels'), axis=3)
-    for i in range(kwargs.get('imageDepthChannels')):
+        # Display the training images in the visualizer.
+        images = tf.split(batchImagesColor, num_or_size_splits=kwargs.get('numTuple'), axis=3)
+    else:
+        batchImages, batchPcl, batchTarget, batchPrevPred, batchTFrecFileIDs = tf.train.batch_join(sampleData,
+                                                                            batch_size=kwargs.get('activeBatchSize'),
+                                                                            capacity=2*numPreprocessThreads*kwargs.get('activeBatchSize'))
+        # Display the training images in the visualizer.
+        images = tf.split(batchImages, num_or_size_splits=kwargs.get('numTuple'), axis=3)
+    for i in range(kwargs.get('numTuple')):
         tf.summary.image('images_'+str(i)+'_', images[i])
     
     if kwargs.get('usefp16'):
@@ -150,7 +192,10 @@ def fetch_reg(numPreprocessThreads, exampleSerialized, sampleData, **kwargs):
         batchPcl = tf.cast(batchPcl, tf.float16)
         batchTarget = tf.cast(batchTarget, tf.float16)
     
-    return batchImages, batchPcl, batchTarget, batchPrevPred, batchTFrecFileIDs 
+    if kwargs.get('morph')['model']=='color':
+        return batchImagesColor, batchTarget, batchPrevPred, batchTFrecFileIDs 
+    else:
+        return batchImages, batchPcl, batchTarget, batchPrevPred, batchTFrecFileIDs 
 
 def fetch_inputs(numPreprocessThreads=None, numReaders=1, **kwargs):
     """Construct input for DeepHomography using the Reader ops.

@@ -305,7 +305,7 @@ def conv_fire_parallel_residual_module(name, prevLayerOut, prevLayerDim, histori
                 else:
                     convRelu = tf.concat([convRelu, convReluPrl], axis=3)
 
-            _activation_summary(convRelu)
+            #_activation_summary(convRelu)
 
     return convRelu, numParallelModules*fireDimsSingleModule[cnnName]
 
@@ -328,7 +328,6 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
     # Split tensor through last dimension into numParallelModules tensors
     prevLayerOut = tf.split(prevLayerOut, numParallelModules, axis=3)
     prevLayerIndivDims = prevLayerDim / numParallelModules
-
     if (fireDimsSingleModule.get('cnn1x1')):
         cnnName = 'cnn1x1'
         kernelSize = 1
@@ -391,7 +390,7 @@ def conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDimsSingleMo
                 else:
                     convRelu = tf.concat([convRelu, convReluPrl], axis=3)
 
-            _activation_summary(convRelu)
+            #_activation_summary(convRelu)
 
     return convRelu, numParallelModules*fireDimsSingleModule[cnnName]
 
@@ -413,9 +412,30 @@ def conv_fire_parallel_inception_module(name, prevLayerOut, prevLayerDim, fireDi
     #if (fireDimsSingleModule.get('cnn7x7')):
     #    fireOut_1x1, prevExpandDim_1x1 = conv_fire_parallel_module(name, prevLayerOut, prevLayerDim, {'cnn7x7': fireDimsSingleModule.get('cnn7x7')}, wd, **kwargs)
     
-    fireOut = tf.concat([fireOut_1x1, fireOut_3x3, fireOut_5x5], axis=3)
 
-    return fireOut, (prevExpandDim_1x1+prevExpandDim_3x3+prevExpandDim_5x5)
+    if (fireDimsSingleModule.get('cnn1x1') and fireDimsSingleModule.get('cnn3x3') and fireDimsSingleModule.get('cnn5x5')):
+        fireOut = tf.concat([fireOut_1x1, fireOut_3x3, fireOut_5x5], axis=3)
+        return fireOut, (prevExpandDim_1x1+prevExpandDim_3x3+prevExpandDim_5x5)
+        #
+    elif (fireDimsSingleModule.get('cnn1x1') and fireDimsSingleModule.get('cnn3x3')):
+        fireOut = tf.concat([fireOut_1x1, fireOut_3x3], axis=3)
+        return fireOut, (prevExpandDim_1x1+prevExpandDim_3x3)
+        #
+    elif (fireDimsSingleModule.get('cnn3x3') and fireDimsSingleModule.get('cnn5x5')):
+        fireOut = tf.concat([fireOut_3x3, fireOut_5x5], axis=3)
+        return fireOut, (prevExpandDim_3x3+prevExpandDim_5x5)
+        #
+    elif (fireDimsSingleModule.get('cnn1x1')):
+        return fireOut_1x1, (prevExpandDim_1x1)
+        #
+    elif (fireDimsSingleModule.get('cnn3x3')):
+        return fireOut_3x3, (prevExpandDim_3x3)
+        #
+    elif (fireDimsSingleModule.get('cnn5x5')):
+        return fireOut_5x5, (prevExpandDim_5x5)
+    else:
+        return
+        
 
 def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut, historicLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')
@@ -478,7 +498,7 @@ def conv_fire_residual_module(name, prevLayerOut, prevLayerDim, historicLayerOut
 
             # residual
             convRelu = tf.nn.relu(historicLayerOut+conv, name=scope.name)
-            _activation_summary(convRelu)
+            #_activation_summary(convRelu)
 
         return convRelu, fireDims[cnnName]
 
@@ -541,7 +561,7 @@ def conv_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwar
 
             conv = tf.nn.bias_add(conv, biases)
             convRelu = tf.nn.relu(conv, name=scope.name)
-            _activation_summary(convRelu)
+            #_activation_summary(convRelu)
 
         return convRelu, fireDims[cnnName]
         
@@ -560,6 +580,53 @@ def conv_fire_inception_module(name, prevLayerOut, prevLayerDim, fireDims, wd=No
 
     return fireOut, (prevExpandDim_1x1+prevExpandDim_3x3+prevExpandDim_5x5)
 
+def fc_fire_parallel_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
+    USE_FP_16 = kwargs.get('usefp16')
+    dtype = tf.float16 if USE_FP_16 else tf.float32
+
+    existingParams = kwargs.get('existingParams')
+
+    numParallelModules = kwargs.get('numParallelModules') # 2
+    # Twin network -> numParallelModules = 2
+    # Split tensor through last dimension into numParallelModules tensors
+    prevLayerOut = tf.split(prevLayerOut, numParallelModules, axis=1)
+    prevLayerIndivDims = prevLayerDim / numParallelModules
+
+    with tf.variable_scope(name):
+        with tf.variable_scope('pfc') as scope:
+            stddev = np.sqrt(2/np.prod(prevLayerOut[0].get_shape().as_list()[1:]))
+            fcWeights = _variable_with_weight_decay('weights',
+                                                    shape=[prevLayerDim, fireDims['pfc']],
+                                                    initializer=(tf.random_normal_initializer(stddev=stddev) if kwargs.get('phase')=='train'
+                                                                   else tf.constant_initializer(0.0, dtype=dtype)),
+                                                    dtype=dtype,
+                                                    wd=wd,
+                                                    trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
+                                                                                           layerName in existingParams) else True)
+            biases = tf.get_variable('biases', fireDims['pfc'],
+                                     initializer=tf.constant_initializer(0.0), dtype=dtype)           
+            
+            for prl in range(numParallelModules):
+                # prevLayerOut is [batchSize, HxWxD], matmul -> [batchSize, fireDims['fc']]
+                fc = tf.matmul(prevLayerOut[prl], fcWeights)
+
+                if kwargs.get('weightNorm'):
+                    # calc weight norm
+                    conv = batch_norm('weight_norm', fc, dtype)
+
+                fc = tf.nn.bias_add(fc, biases)
+                fcReluPrl = tf.nn.relu(fc, name=scope.name)
+                # Concatinate results along last dimension to get one output tensor
+                if prl is 0:
+                    fcRelu = fcReluPrl
+                else:
+                    fcRelu = tf.concat([fcRelu, fcReluPrl], axis=1)
+
+            #_activation_summary(fcRelu)
+
+        return fcRelu, numParallelModules*fireDims['pfc']
+
+
 def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
     USE_FP_16 = kwargs.get('usefp16')
     dtype = tf.float16 if USE_FP_16 else tf.float32
@@ -577,6 +644,8 @@ def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs
                                                     wd=wd,
                                                     trainable=kwargs.get('tuneExistingWeights') if (existingParams is not None and 
                                                                                            layerName in existingParams) else True)
+            biases = tf.get_variable('biases', fireDims['fc'],
+                                     initializer=tf.constant_initializer(0.0), dtype=dtype)
             
             # prevLayerOut is [batchSize, HxWxD], matmul -> [batchSize, fireDims['fc']]
             fc = tf.matmul(prevLayerOut, fcWeights)
@@ -585,11 +654,9 @@ def fc_fire_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs
                 # calc weight norm
                 fc = batch_norm('weight_norm', fc, dtype)
 
-            biases = tf.get_variable('biases', fireDims['fc'],
-                                     initializer=tf.constant_initializer(0.0), dtype=dtype)
             fc = tf.nn.bias_add(fc, biases)
             fcRelu = tf.nn.relu(fc, name=scope.name)
-            _activation_summary(fcRelu)
+            #_activation_summary(fcRelu)
         
         return fcRelu, fireDims['fc']
 def fc_fire_LSTM_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
@@ -621,7 +688,7 @@ def fc_fire_LSTM_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **k
                                      initializer=tf.constant_initializer(0.0), dtype=dtype)
             fc = tf.nn.bias_add(fc, biases)
             fcRelu = tf.nn.relu(fc, name=scope.name)
-            _activation_summary(fcRelu)
+            #_activation_summary(fcRelu)
         
         return fcRelu, fireDims['fc']
 def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **kwargs):
@@ -652,7 +719,7 @@ def fc_regression_module(name, prevLayerOut, prevLayerDim, fireDims, wd=None, **
             biases = tf.get_variable('biases', fireDims['fc'],
                                      initializer=tf.constant_initializer(0.0), dtype=dtype)
             fc = tf.nn.bias_add(fc, biases)
-            _activation_summary(fc)
+            #_activation_summary(fc)
         
         return fc, fireDims['fc']
 

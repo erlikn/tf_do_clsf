@@ -121,17 +121,27 @@ def train(modelParams, epochNumber):
         else:
             print('Setting up   Regression model...')
             # Build input pipeline: Get images and transformation for model_cnn.
-            images, pclA, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
+            if modelParams.get('morph')['model']=='color':
+                imagesColor, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
+            else:
+                images, pcl, targetT, prevP, tfrecFileIDs = data_input.inputs(**modelParams)
             print('Input        ready')
             # Build a Graph
             # inference model
-            targetP = model_cnn.inference(images, **modelParams)
+            if modelParams.get('morph')['model']=='color':
+                #imagesColor = tf.image.resize_images(imagesColor, [int(int(imagesColor.get_shape()[1])/4), int(int(imagesColor.get_shape()[2])/4)])
+                #print(imagesColor.get_shape())
+                targetP = model_cnn.inference(imagesColor, **modelParams)
+
+            else:
+                targetP = model_cnn.inference(images, **modelParams)
             print('Graph        ready')
             if modelParams.get('lastTuple'):
                 # Training with all, loss on the last tuple only
                 print("Using all ", modelParams.get('numTuple'), " to predict (rgs) only the LAST transformation")
                 # loss on last tuple
                 loss = model_cnn.loss(prevP[:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], targetP, targetT[:,:,modelParams['numTuple']-2:modelParams['numTuple']-1], **modelParams)
+
             else:
                 # Training on all, loss on all
                 print("Using all ", modelParams.get('numTuple'), " to predict (rgs) all", modelParams.get('numTuple'), " transformations")
@@ -159,7 +169,7 @@ def train(modelParams, epochNumber):
         # Start running operations on the Graph.
         config = tf.ConfigProto(log_device_placement=modelParams['logDevicePlacement'])
         config.gpu_options.allow_growth = True
-        config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+        #config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
         sess = tf.Session(config=config)
         print('Session      ready')
 

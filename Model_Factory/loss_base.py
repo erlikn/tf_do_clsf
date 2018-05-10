@@ -28,7 +28,7 @@ def add_loss_summaries(total_loss, batchSize):
         # Name each loss as '(raw)' and name the moving average version of the loss
         # as the original loss name.
         tf.summary.scalar(l.op.name + '_raw', l)
-        tf.summary.scalar(l.op.name, loss_averages.average(l))
+        tf.summary.scalar(l.op.name + '_average', loss_averages.average(l))
 
     return loss_averages_op
 
@@ -44,32 +44,10 @@ def _l2_loss(pred, tval): # batchSize=Sne
     Returns:
       Loss tensor of type float.
     """
-    #if not batch_size:
-    #    batch_size = kwargs.get('train_batch_size')
-    
-    #l1_loss = tf.abs(tf.subtract(logits, HAB), name="abs_loss")
-    #l1_loss_mean = tf.reduce_mean(l1_loss, name='abs_loss_mean')
-    #tf.add_to_collection('losses', l2_loss_mean)
-
     l2_loss = tf.nn.l2_loss(tf.subtract(pred, tval), name="loss_l2")
-    tf.add_to_collection('losses', l2_loss)
-
-    #l2_loss_mean = tf.reduce_mean(l2_loss, name='l2_loss_mean')
-    #tf.add_to_collection('losses', l2_loss_mean)
-
-    #mse = tf.reduce_mean(tf.square(logits - HAB), name="mse")
-    #tf.add_to_collection('losses', mse)
-
-    # Calculate the average cross entropy loss across the batch.
-    # labels = tf.cast(labels, tf.int64)
-    # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-    #     logits, labels, name='cross_entropy_per_example')
-    # cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
-    # tf.add_to_collection('losses', cross_entropy_mean)
-
-    # The total loss is defined as the cross entropy loss plus all of the weight
-    # decay terms (L2 loss).
-    return tf.add_n(tf.get_collection('losses'), name='loss_total')
+    #tf.add_to_collection('losses', l2_loss)
+    #return tf.add_n(tf.get_collection('losses'), name='loss_total')
+    return l2_loss
 
 
 def _weighted_L2_loss(tMatP, tMatT, activeBatchSize):
@@ -189,18 +167,74 @@ def _transformation_loss_nTuple_last(targetP, targetT, prevPred, nTuple, activeB
     pad = tf.reshape( tf.tile( tf.constant([0, 0, 0, 1], dtype=tf.float32), [activeBatchSize]), [activeBatchSize, 4]) # [activeBatchSize x 4]
     targetP = tf.reshape(tf.concat([tf.reshape(targetP,[activeBatchSize, 12]),pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
     targetT = tf.reshape(tf.concat([tf.reshape(targetT,[activeBatchSize, 12]),pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
-    prevPred = tf.reshape(tf.concat([tf.reshape(prevPred,[activeBatchSize, 12]),pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
+    #prevPred = tf.reshape(tf.concat([tf.reshape(prevPred,[activeBatchSize, 12]),pad],1), [activeBatchSize, 4, 4])# [activeBatchSize x 12] -> [activeBatchSize x 16] -> [activeBatchSize x 4 x 4]
     # Initialize points : 5 points that don't lie in a plane
     # [activeBatchSize x 4 x 5]
-    points = tf.reshape( tf.tile( tf.constant([0,1000,0,500, -230, 0, 1000, 100, 500, 33, 0, 1000, 0, 0, 672, 1, 1, 1, 1, 1], dtype=tf.float32), [activeBatchSize]), [activeBatchSize, 4, 5]) 
+    points = tf.reshape( tf.tile(tf.constant([0, 1000,   0, 500, -230,
+                                              0, 1000, 100, 500,   33,
+                                              0, 1000,   0,   0,  672,
+                                              1,    1,   1,   1,   1], dtype=tf.float32),
+                                [activeBatchSize]), [activeBatchSize, 4, 5]) 
     # First get the source to current transformation: pPred x pCurrent
-    targetP = tf.matmul(prevPred, targetP) # [activeBatchSize x 4 x 4] * [activeBatchSize x 4 x 4] = [activeBatchSize x 4 x 4]
+    #targetP = tf.matmul(prevPred, targetP) # [activeBatchSize x 4 x 4] * [activeBatchSize x 4 x 4] = [activeBatchSize x 4 x 4]
     # Transform points based on prediction
     pPoints = tf.matmul(targetP, points) # [activeBatchSize x 4 x 4] * [activeBatchSize x 4 x 5] = [activeBatchSize x 4 x 5]
     # Transform points based on target
     tPoints = tf.matmul(targetT, points) # [activeBatchSize x 4 x 4] * [activeBatchSize x 4 x 5] = [activeBatchSize x 4 x 5]
     # Get and return L2 Loss between corresponding points
     return _l2_loss(pPoints, tPoints)
+
+def _params_transformation_loss_nTuple_last(targetP, targetT, prevPred, nTuple, activeBatchSize):
+    '''
+    Input:
+        targetP = [activeBatchSize x 6]
+        targetT = [activeBatchSize x 6]
+    Description:
+        tMatP = [activeBatchSize x 12]
+        tmatT = [activeBatchSize x 12]
+        use pre-existing _transformation_loss_nTuple_last to calculate the l2 loss
+    '''
+    # get transformation matrix from 6 parameters
+    # get prediction tmat
+    tMatP = tf.stack([tf.cos(targetP[:,0])*tf.cos(targetP[:,1]),  
+                      (tf.cos(targetP[:,0])*tf.sin(targetP[:,1])*tf.sin(targetP[:,2]))-(tf.sin(targetP[:,0])*tf.cos(targetP[:,2])),
+                      (tf.cos(targetP[:,0])*tf.sin(targetP[:,1])*tf.cos(targetP[:,2]))+(tf.sin(targetP[:,0])*tf.sin(targetP[:,2])),
+                      targetP[:,3],
+                      tf.sin(targetP[:,0])*tf.cos(targetP[:,1]),
+                      (tf.sin(targetP[:,0])*tf.sin(targetP[:,1])*tf.sin(targetP[:,2]))+(tf.cos(targetP[:,0])*tf.cos(targetP[:,2])),
+                      (tf.sin(targetP[:,0])*tf.sin(targetP[:,1])*tf.cos(targetP[:,2]))-(tf.cos(targetP[:,0])*tf.sin(targetP[:,2])),
+                      targetP[:,4],
+                      -tf.sin(targetP[:,1]),tf.cos(targetP[:,1])*tf.sin(targetP[:,2]),
+                      tf.cos(targetP[:,1])*tf.cos(targetP[:,2]),
+                      targetP[:,5]], 
+                     axis=1)
+    # get prevPred tmat
+    tMatPrev = tf.stack([tf.cos(prevPred[:,0])*tf.cos(prevPred[:,1]),  
+                      (tf.cos(prevPred[:,0])*tf.sin(prevPred[:,1])*tf.sin(prevPred[:,2]))-(tf.sin(prevPred[:,0])*tf.cos(prevPred[:,2])),
+                      (tf.cos(prevPred[:,0])*tf.sin(prevPred[:,1])*tf.cos(prevPred[:,2]))+(tf.sin(prevPred[:,0])*tf.sin(prevPred[:,2])),
+                      prevPred[:,3],
+                      tf.sin(prevPred[:,0])*tf.cos(prevPred[:,1]),
+                      (tf.sin(prevPred[:,0])*tf.sin(prevPred[:,1])*tf.sin(prevPred[:,2]))+(tf.cos(prevPred[:,0])*tf.cos(prevPred[:,2])),
+                      (tf.sin(prevPred[:,0])*tf.sin(prevPred[:,1])*tf.cos(prevPred[:,2]))-(tf.cos(prevPred[:,0])*tf.sin(prevPred[:,2])),
+                      prevPred[:,4],
+                      -tf.sin(prevPred[:,1]),tf.cos(prevPred[:,1])*tf.sin(prevPred[:,2]),
+                      tf.cos(prevPred[:,1])*tf.cos(prevPred[:,2]),
+                      prevPred[:,5]], 
+                     axis=1)
+    # get gt tmat
+    tMatT = tf.stack([tf.cos(targetT[:,0])*tf.cos(targetT[:,1]),  
+                      (tf.cos(targetT[:,0])*tf.sin(targetT[:,1])*tf.sin(targetT[:,2]))-(tf.sin(targetT[:,0])*tf.cos(targetT[:,2])),
+                      (tf.cos(targetT[:,0])*tf.sin(targetT[:,1])*tf.cos(targetT[:,2]))+(tf.sin(targetT[:,0])*tf.sin(targetT[:,2])),
+                      targetT[:,3],
+                      tf.sin(targetT[:,0])*tf.cos(targetT[:,1]),
+                      (tf.sin(targetT[:,0])*tf.sin(targetT[:,1])*tf.sin(targetT[:,2]))+(tf.cos(targetT[:,0])*tf.cos(targetT[:,2])),
+                      (tf.sin(targetT[:,0])*tf.sin(targetT[:,1])*tf.cos(targetT[:,2]))-(tf.cos(targetT[:,0])*tf.sin(targetT[:,2])),
+                      targetT[:,4],
+                      -tf.sin(targetT[:,1]),tf.cos(targetT[:,1])*tf.sin(targetT[:,2]),
+                      tf.cos(targetT[:,1])*tf.cos(targetT[:,2]),
+                      targetT[:,5]], 
+                     axis=1)
+    return _transformation_loss_nTuple_last(tMatP, tMatT, prevPred, nTuple, activeBatchSize)
 
 def loss(pred, tval, prevPred, **kwargs):
     """
@@ -236,4 +270,11 @@ def loss(pred, tval, prevPred, **kwargs):
             return _transformation_loss_nTuple_last(pred, tval, prevPred, 1, kwargs.get('activeBatchSize'))
         else:
             return _transformation_loss_nTuple_last(pred, tval, prevPred, kwargs.get('numTuple'), kwargs.get('activeBatchSize')) # not complete
+    if lossFunction == '_params_transformation_loss_nTuple_last':
+        if kwargs.get('lastTuple'):
+            if prevPred is 0:
+                return None
+            return _params_transformation_loss_nTuple_last(pred, tval, prevPred, 1, kwargs.get('activeBatchSize'))
+        else:
+            return _params_transformation_loss_nTuple_last(pred, tval, prevPred, kwargs.get('numTuple'), kwargs.get('activeBatchSize')) # not complete
 
